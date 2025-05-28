@@ -15,7 +15,7 @@ export default function Home() {
     if (isHidden) {
         setisHidden(false)
         setLocalData(todosData.sort((a, b) => a.isCompleted - b.isCompleted))
-        return;
+        return; 
     }
     setisHidden(!isHidden)
     //Filtramos las tareas y regresamos las tareas que no estan completadas
@@ -43,6 +43,11 @@ export default function Home() {
 
       <Text style={styles.title}>Mañana</Text>
       <TodoList todosData={todosData.filter(todo => !todo.isToday)} />
+
+        <TouchableOpacity style={styles.button}>
+            <Text style={styles.plus}>+</Text>
+
+        </TouchableOpacity>
     </View>
   );
 }
@@ -67,4 +72,31 @@ const styles = StyleSheet.create({
     marginBottom: 35,
     marginTop: 10,
   },
+
+  button: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#000',
+    position: 'absolute',
+    bottom: 50,
+    right: 20,
+    shadowOffset: {
+        width: 0,
+        height: 2,
+    },
+    shadowOpacity: .5,
+    shadowRadius: .5,
+    elevation: .5,
+  },
+
+  plus: {
+    fontSize: 40,
+    color: '#fff',
+    position: 'absolute',
+    top: -6,
+    left: 9,
+  }
+
+
 });
