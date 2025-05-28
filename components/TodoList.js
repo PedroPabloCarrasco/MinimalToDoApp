@@ -1,28 +1,23 @@
+// archivo: components/TodoList.js
+
 import React from 'react';
-import { FlatList, Text, View, StyleSheet } from 'react-native';
+import { FlatList, StyleSheet } from 'react-native';
 import { todosData } from '../data/todo';
+import Todo from './Todo';
 
 export default function TodoList() {
   return (
     <FlatList
       data={todosData}
       keyExtractor={(item) => item.id.toString()}
-      renderItem={({ item }) => (
-        <View style={styles.item}>
-          <Text style={styles.text}>{item.text}</Text>
-        </View>
-      )}
+      renderItem={({ item }) => <Todo {...item} />}
+      contentContainerStyle={styles.list}
     />
   );
 }
 
 const styles = StyleSheet.create({
-  item: {
-    padding: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
-  },
-  text: {
-    fontSize: 16,
+  list: {
+    padding: 10,
   },
 });
