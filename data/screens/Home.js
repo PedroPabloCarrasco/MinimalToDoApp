@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { StyleSheet, Text, View, Image } from 'react-native';
 import TodoList from '../../components/TodoList';
+import { todosData } from '../todos';
 
 export default function Home() {
   return (
@@ -11,10 +12,12 @@ export default function Home() {
       />
 
     <Text style={styles.title}>Hoy</Text>
+    <TodoList todosData={todosData} />
     <Text style={styles.title}>Mañana</Text>
+    <TodoList todosData={todosData} />
 
 
-      <TodoList />
+      
     </View>
   );
 }

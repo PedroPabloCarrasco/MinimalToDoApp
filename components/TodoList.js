@@ -2,10 +2,9 @@
 
 import React from 'react';
 import { FlatList, StyleSheet } from 'react-native';
-import { todosData } from '../data/todo';
 import Todo from './Todo';
 
-export default function TodoList() {
+export default function TodoList({ todosData }) {
   return (
     <FlatList
       data={todosData}
