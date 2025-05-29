@@ -1,3 +1,4 @@
+// App.js
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
@@ -18,7 +19,11 @@ export default function App() {
         <Stack.Screen
           name="add"
           component={AddTodo}
-          options={{ title: 'Agregar tarea' }}
+          options={{
+            presentation: 'transparentModal', // hace que se muestre como modal en Android
+            animation: 'slide_from_bottom',
+            headerShown: false,
+          }}
         />
       </Stack.Navigator>
     </NavigationContainer>

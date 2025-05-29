@@ -5,13 +5,14 @@ import { todosData } from '../todos';
 import { useNavigation } from '@react-navigation/native';
 
 export default function Home() {
-  const navigation = useNavigation();
+  
 
   const [localData, setLocalData] = React.useState(
     todosData.sort((a, b) => a.isCompleted - b.isCompleted)
   );
 
   const [isHidden, setIsHidden] = React.useState(false);
+  const navigation = useNavigation();
 
   const handleHidePress = () => {
     if (isHidden) {
