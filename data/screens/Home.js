@@ -1,28 +1,27 @@
 import * as React from 'react';
 import { StyleSheet, Text, View, Image, TouchableOpacity } from 'react-native';
 import TodoList from '../../components/TodoList';
-import { todosData } from '../todos'; // asegúrate que está bien exportado
+import { todosData } from '../todos';
+import { useNavigation } from '@react-navigation/native';
 
 export default function Home() {
+  const navigation = useNavigation();
+
   const [localData, setLocalData] = React.useState(
     todosData.sort((a, b) => a.isCompleted - b.isCompleted)
   );
 
-  const [isHidden, setisHidden] = React.useState(false);
+  const [isHidden, setIsHidden] = React.useState(false);
 
-  //Función para ocultar elementos
   const handleHidePress = () => {
     if (isHidden) {
-        setisHidden(false)
-        setLocalData(todosData.sort((a, b) => a.isCompleted - b.isCompleted))
-        return; 
+      setIsHidden(false);
+      setLocalData(todosData.sort((a, b) => a.isCompleted - b.isCompleted));
+    } else {
+      setIsHidden(true);
+      setLocalData(localData.filter(todo => !todo.isCompleted));
     }
-    setisHidden(!isHidden)
-    //Filtramos las tareas y regresamos las tareas que no estan completadas
-    setLocalData(localData.filter(todo => !todo.isCompleted)) 
-
-
-  }
+  };
 
   return (
     <View style={styles.container}>
@@ -31,23 +30,26 @@ export default function Home() {
         style={styles.pic}
       />
 
-      <View style={{flexDirection: 'row', alignItems: 'center', justifyContent:'space-between'}}>
+      <View style={styles.header}>
         <Text style={styles.title}>Hoy</Text>
+        <TouchableOpacity onPress={handleHidePress}>
+          <Text style={styles.toggleText}>
+            {isHidden ? 'Mostrar tareas completadas' : 'Ocultar tareas completadas'}
+          </Text>
+        </TouchableOpacity>
+      </View>
 
-      <TouchableOpacity onPress={handleHidePress}>
-        <Text style={{ color: '#3478F6' }}>{isHidden ? "Mostrar tareas completadas": "Ocultar tareas completadas"}</Text>
-      </TouchableOpacity>
-        </View>
       <TodoList todosData={localData.filter(todo => todo.isToday)} />
-      
 
       <Text style={styles.title}>Mañana</Text>
       <TodoList todosData={todosData.filter(todo => !todo.isToday)} />
 
-        <TouchableOpacity style={styles.button}>
-            <Text style={styles.plus}>+</Text>
-
-        </TouchableOpacity>
+      <TouchableOpacity
+        style={styles.button}
+        onPress={() => navigation.navigate('add')}
+      >
+        <Text style={styles.plus}>+</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -66,37 +68,40 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     alignSelf: 'flex-end',
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   title: {
     fontSize: 34,
     fontWeight: 'bold',
     marginBottom: 35,
     marginTop: 10,
   },
-
+  toggleText: {
+    color: '#3478F6',
+  },
   button: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     backgroundColor: '#000',
     position: 'absolute',
-    bottom: 50,
+    bottom: 40,
     right: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
     shadowOffset: {
-        width: 0,
-        height: 2,
+      width: 0,
+      height: 2,
     },
-    shadowOpacity: .5,
-    shadowRadius: .5,
-    elevation: .5,
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
   },
-
   plus: {
     fontSize: 40,
     color: '#fff',
-    position: 'absolute',
-    top: -6,
-    left: 9,
-  }
-
-
+  },
 });
