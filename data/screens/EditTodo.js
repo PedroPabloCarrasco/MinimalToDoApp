@@ -1,22 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, TextInput,
-  TouchableOpacity, Switch, Alert
+  View, Text, TextInput, TouchableOpacity,
+  StyleSheet, Switch, Alert
 } from 'react-native';
 import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 
-export default function AddTodo({ onAdd }) {
+export default function EditTodo() {
   const navigation = useNavigation();
+  const route = useRoute();
+  const { todo, index, onUpdate } = route.params;
 
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
+  const [name, setName] = useState(todo.name);
+  const [description, setDescription] = useState(todo.description || '');
   const [date, setDate] = useState(new Date());
-  const [isToday, setIsToday] = useState(false);
-  const [priority, setPriority] = useState('Media');
+  const [isToday, setIsToday] = useState(todo.isToday);
+  const [priority, setPriority] = useState(todo.priority || 'Media');
 
-  // Mostrar selector fecha
+  useEffect(() => {
+    if (todo.date) {
+      // Convierte la fecha 'dd/mm/yyyy' a objeto Date para el picker
+      const parts = todo.date.split('/');
+      const d = new Date(parts[2], parts[1] - 1, parts[0], ...todo.time.split(':'));
+      setDate(d);
+    }
+  }, []);
+
   const showDatePicker = () => {
     DateTimePickerAndroid.open({
       value: date,
@@ -27,7 +37,6 @@ export default function AddTodo({ onAdd }) {
     });
   };
 
-  // Mostrar selector hora
   const showTimePicker = () => {
     DateTimePickerAndroid.open({
       value: date,
@@ -39,16 +48,16 @@ export default function AddTodo({ onAdd }) {
     });
   };
 
-  const handleAddTodo = () => {
+  const handleSave = () => {
     if (!name.trim()) {
-      Alert.alert('Error', 'Por favor ingresa un nombre de tarea.');
+      Alert.alert('Error', 'El nombre es obligatorio.');
       return;
     }
 
     const formattedDate = date.toLocaleDateString();
     const formattedTime = `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
 
-    const todo = {
+    const updatedTodo = {
       name,
       description,
       date: formattedDate,
@@ -57,23 +66,22 @@ export default function AddTodo({ onAdd }) {
       priority,
     };
 
-    onAdd(todo);
-    navigation.navigate('Tasks');
+    onUpdate(index, updatedTodo);
+    navigation.goBack();
   };
 
   return (
     <View style={styles.container}>
-      {/* Flecha para volver atrás */}
+      {/* Botón regresar */}
       <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
         <Ionicons name="arrow-back" size={24} color="black" />
       </TouchableOpacity>
 
-      <Text style={styles.title}>Agregar tarea</Text>
+      <Text style={styles.title}>Editar tarea</Text>
 
       <Text style={styles.label}>Nombre</Text>
       <TextInput
         style={styles.input}
-        placeholder="Ej: Comprar leche"
         value={name}
         onChangeText={setName}
       />
@@ -81,7 +89,6 @@ export default function AddTodo({ onAdd }) {
       <Text style={styles.label}>Descripción</Text>
       <TextInput
         style={[styles.input, { height: 100 }]}
-        placeholder="Ej: Ir al supermercado y comprar productos"
         value={description}
         onChangeText={setDescription}
         multiline
@@ -121,8 +128,8 @@ export default function AddTodo({ onAdd }) {
         ))}
       </View>
 
-      <TouchableOpacity onPress={handleAddTodo} style={styles.button}>
-        <Text style={styles.buttonText}>Guardar</Text>
+      <TouchableOpacity onPress={handleSave} style={styles.button}>
+        <Text style={styles.buttonText}>Guardar cambios</Text>
       </TouchableOpacity>
     </View>
   );

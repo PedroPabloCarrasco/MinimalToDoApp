@@ -1,23 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
   View, Text, StyleSheet, FlatList,
-  TouchableOpacity, SafeAreaView
+  TouchableOpacity, SafeAreaView, Alert
 } from 'react-native';
-import { useIsFocused } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 
-export default function Home({ route, navigation }) {
-  const isFocused = useIsFocused();
-  const [todos, setTodos] = useState([]);
-
-  useEffect(() => {
-    if (isFocused && route.params?.todo) {
-      setTodos((prev) => [...prev, route.params.todo]);
-    }
-  }, [route.params?.todo, isFocused]);
-
+export default function Home({ navigation, todos, onUpdate, onDelete }) {
+  // Etiqueta de prioridad
   const renderPriority = (priority) => {
-    const color = priority === 'Alta' ? '#e53935' : priority === 'Media' ? '#fb8c00' : '#43a047';
+    const color = priority === 'Alta' ? '#e53935' :
+                  priority === 'Media' ? '#fb8c00' : '#43a047';
     return (
       <View style={[styles.priorityTag, { backgroundColor: color }]}>
         <Text style={styles.priorityText}>{priority}</Text>
@@ -25,14 +17,44 @@ export default function Home({ route, navigation }) {
     );
   };
 
-  const renderItem = ({ item }) => (
-    <View style={styles.todoCard}>
+  // Confirmar eliminación
+  const confirmDelete = (index) => {
+    Alert.alert(
+      'Eliminar tarea',
+      '¿Estás seguro de que deseas eliminar esta tarea?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: () => onDelete(index),
+        },
+      ]
+    );
+  };
+
+  // Cada item de la lista
+  const renderItem = ({ item, index }) => (
+    <TouchableOpacity
+      onPress={() =>
+        navigation.navigate('EditTodo', {
+          todo: item,
+          index,
+          onUpdate,
+        })
+      }
+      style={styles.todoCard}
+    >
       <View style={styles.todoHeader}>
         <Text style={styles.todoTitle}>{item.name}</Text>
         {renderPriority(item.priority)}
       </View>
-      <Text style={styles.todoTime}>🕒 {item.time} | {item.isToday ? 'Hoy' : 'Otro día'}</Text>
-      {item.description ? <Text style={styles.todoDescription}>{item.description}</Text> : null}
+      <Text style={styles.todoTime}>
+        📅 {item.date} - 🕒 {item.time} | {item.isToday ? 'Hoy' : 'Otro día'}
+      </Text>
+      {item.description ? (
+        <Text style={styles.todoDescription}>{item.description}</Text>
+      ) : null}
       {item.activities?.length > 0 && (
         <View style={styles.activities}>
           {item.activities.map((act, idx) => (
@@ -40,7 +62,13 @@ export default function Home({ route, navigation }) {
           ))}
         </View>
       )}
-    </View>
+      <TouchableOpacity
+        onPress={() => confirmDelete(index)}
+        style={styles.deleteButton}
+      >
+        <Ionicons name="trash" size={20} color="white" />
+      </TouchableOpacity>
+    </TouchableOpacity>
   );
 
   return (
@@ -65,10 +93,18 @@ export default function Home({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f2f2f2', padding: 20 },
+  container: {
+    flex: 1,
+    backgroundColor: '#f2f2f2',
+    paddingHorizontal: 20,
+    paddingTop: 40, // espacio superior
+  },
   header: {
-    fontSize: 28, fontWeight: 'bold',
-    marginBottom: 20, textAlign: 'center',
+    fontSize: 28,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: 'center',
+    marginTop: 20, // espacio adicional bajo SafeArea
   },
   todoCard: {
     backgroundColor: '#fff',
@@ -76,6 +112,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 15,
     elevation: 2,
+    position: 'relative',
   },
   todoHeader: {
     flexDirection: 'row',
@@ -83,13 +120,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   todoTitle: {
-    fontSize: 18, fontWeight: 'bold', color: '#111',
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#111',
   },
   todoTime: {
-    fontSize: 14, color: '#666', marginTop: 6,
+    fontSize: 14,
+    color: '#666',
+    marginTop: 6,
   },
   todoDescription: {
-    fontSize: 15, color: '#333', marginTop: 10,
+    fontSize: 15,
+    color: '#333',
+    marginTop: 10,
   },
   activities: {
     marginTop: 10,
@@ -108,6 +151,14 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: '600',
     fontSize: 12,
+  },
+  deleteButton: {
+    position: 'absolute',
+    bottom: 12,
+    right: 12,
+    backgroundColor: '#e53935',
+    padding: 8,
+    borderRadius: 30,
   },
   fab: {
     position: 'absolute',
