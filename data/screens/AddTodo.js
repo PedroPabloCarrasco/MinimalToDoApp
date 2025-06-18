@@ -1,31 +1,37 @@
-import * as React from 'react';
+import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  Switch,
-  Alert,
+  View, Text, StyleSheet, TextInput,
+  TouchableOpacity, Switch, Alert, ScrollView, FlatList
 } from 'react-native';
 import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
+import { useNavigation } from '@react-navigation/native';
+import { Ionicons, Feather } from '@expo/vector-icons';
 
 export default function AddTodo() {
-  const [name, setName] = React.useState('');
-  const [date, setDate] = React.useState(new Date());
-  const [isToday, setIsToday] = React.useState(false);
+  const navigation = useNavigation();
+
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [date, setDate] = useState(new Date());
+  const [isToday, setIsToday] = useState(false);
+  const [activities, setActivities] = useState([]);
+  const [newActivity, setNewActivity] = useState('');
 
   const showTimePicker = () => {
     DateTimePickerAndroid.open({
       value: date,
       onChange: (event, selectedDate) => {
-        if (selectedDate) {
-          setDate(selectedDate);
-        }
+        if (selectedDate) setDate(selectedDate);
       },
       mode: 'time',
       is24Hour: true,
     });
+  };
+
+  const handleAddActivity = () => {
+    if (!newActivity.trim()) return;
+    setActivities([...activities, newActivity]);
+    setNewActivity('');
   };
 
   const handleAddTodo = () => {
@@ -34,40 +40,63 @@ export default function AddTodo() {
       return;
     }
 
-    // Aquí puedes manejar el envío de la tarea
-    Alert.alert(
-      'Tarea agregada',
-      `Nombre: ${name}\nHora: ${date.getHours().toString().padStart(2, '0')}:${date
+    const todo = {
+      name,
+      description,
+      time: `${date.getHours().toString().padStart(2, '0')}:${date
         .getMinutes()
         .toString()
-        .padStart(2, '0')}\nHoy: ${isToday ? 'Sí' : 'No'}`
-    );
+        .padStart(2, '0')}`,
+      isToday,
+      activities,
+    };
 
-    // Limpiar inputs
+    navigation.navigate('Home', { todo });
+
+    // Reset
     setName('');
+    setDescription('');
     setIsToday(false);
     setDate(new Date());
+    setActivities([]);
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Agregar tarea</Text>
+    <ScrollView style={styles.container}>
+      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+        <Ionicons name="arrow-back" size={28} color="black" />
+      </TouchableOpacity>
+
+      <Text style={styles.title}>Nueva Tarea</Text>
 
       {/* Nombre */}
-      <View style={styles.inputContainer}>
-        <Text style={styles.inputTitle}>Nombre</Text>
+      <View style={styles.section}>
+        <Text style={styles.label}>Título</Text>
         <TextInput
-          style={styles.textInput}
-          placeholder="Tarea"
-          placeholderTextColor="#00000030"
-          onChangeText={setName}
+          style={styles.input}
+          placeholder="Ej: Comprar materiales"
+          placeholderTextColor="#888"
           value={name}
+          onChangeText={setName}
+        />
+      </View>
+
+      {/* Descripción */}
+      <View style={styles.section}>
+        <Text style={styles.label}>Descripción</Text>
+        <TextInput
+          style={[styles.input, { height: 80, textAlignVertical: 'top' }]}
+          placeholder="Detalles de la tarea..."
+          placeholderTextColor="#888"
+          multiline
+          value={description}
+          onChangeText={setDescription}
         />
       </View>
 
       {/* Hora */}
-      <View style={styles.inputContainer}>
-        <Text style={styles.inputTitle}>Hora</Text>
+      <View style={styles.section}>
+        <Text style={styles.label}>Hora</Text>
         <TouchableOpacity onPress={showTimePicker} style={styles.timeButton}>
           <Text style={styles.timeText}>
             {date.getHours().toString().padStart(2, '0')}:
@@ -77,20 +106,38 @@ export default function AddTodo() {
       </View>
 
       {/* Hoy */}
-      <View style={styles.inputContainerRow}>
-        <Text style={styles.inputTitle}>Hoy</Text>
-        <Switch
-          value={isToday}
-          onValueChange={setIsToday}
-          style={{ marginLeft: 10 }}
-        />
+      <View style={[styles.section, styles.switchRow]}>
+        <Text style={styles.label}>¿Es para hoy?</Text>
+        <Switch value={isToday} onValueChange={setIsToday} />
       </View>
 
-      {/* Botón */}
+      {/* Actividades */}
+      <View style={styles.section}>
+        <Text style={styles.label}>Actividades</Text>
+        {activities.map((item, index) => (
+          <Text key={index} style={styles.activityItem}>• {item}</Text>
+        ))}
+        <View style={styles.activityInputRow}>
+          <TextInput
+            style={styles.activityInput}
+            placeholder="Nueva actividad..."
+            placeholderTextColor="#888"
+            value={newActivity}
+            onChangeText={setNewActivity}
+          />
+          <TouchableOpacity onPress={handleAddActivity} style={styles.addButton}>
+            <Feather name="plus" size={22} color="white" />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Botón principal */}
       <TouchableOpacity onPress={handleAddTodo} style={styles.button}>
-        <Text style={styles.buttonText}>Done</Text>
+        <Text style={styles.buttonText}>Guardar Tarea</Text>
       </TouchableOpacity>
-    </View>
+
+      <View style={{ height: 50 }} />
+    </ScrollView>
   );
 }
 
@@ -98,56 +145,96 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingTop: 80,
-    paddingHorizontal: 30,
-    backgroundColor: 'white',
+    paddingHorizontal: 20,
+    backgroundColor: '#F9FAFB',
+  },
+  backButton: {
+    position: 'absolute',
+    top: 40,
+    left: 20,
+    padding: 10,
+    zIndex: 10,
   },
   title: {
-    fontSize: 24,
-    marginBottom: 30,
-    textAlign: 'center',
+    fontSize: 26,
     fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 25,
+    color: '#111',
   },
-  inputContainer: {
+  section: {
     marginBottom: 20,
   },
-  inputContainerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  inputTitle: {
-    fontSize: 18,
-    fontWeight: '500',
+  label: {
+    fontSize: 17,
+    fontWeight: '600',
     color: '#333',
+    marginBottom: 6,
   },
-  textInput: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#00000030',
-    paddingVertical: 6,
+  input: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    padding: 12,
     fontSize: 16,
   },
   timeButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 15,
+    backgroundColor: '#fff',
+    borderColor: '#ddd',
     borderWidth: 1,
-    borderColor: '#00000030',
-    borderRadius: 5,
-    marginTop: 5,
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    alignItems: 'center',
   },
   timeText: {
     fontSize: 16,
+    fontWeight: '500',
+    color: '#222',
+  },
+  switchRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  activityInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  activityInput: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
+  },
+  addButton: {
+    marginLeft: 10,
+    backgroundColor: '#000',
+    padding: 12,
+    borderRadius: 10,
+  },
+  activityItem: {
+    fontSize: 16,
+    color: '#444',
+    paddingVertical: 2,
   },
   button: {
     marginTop: 30,
-    backgroundColor: '#000000',
-    height: 46,
-    borderRadius: 11,
-    justifyContent: 'center',
+    backgroundColor: '#000',
+    borderRadius: 14,
+    paddingVertical: 16,
     alignItems: 'center',
+    elevation: 4,
   },
   buttonText: {
-    color: 'white',
-    fontSize: 16,
+    color: '#fff',
+    fontSize: 17,
     fontWeight: '600',
   },
 });

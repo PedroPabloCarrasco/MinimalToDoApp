@@ -1,108 +1,121 @@
-import * as React from 'react';
-import { StyleSheet, Text, View, Image, TouchableOpacity } from 'react-native';
-import TodoList from '../../components/TodoList';
-import { todosData } from '../todos';
-import { useNavigation } from '@react-navigation/native';
+import React, { useEffect, useState } from 'react';
+import {
+  View, Text, StyleSheet, FlatList,
+  TouchableOpacity, SafeAreaView
+} from 'react-native';
+import { useIsFocused } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 
-export default function Home() {
-  
+export default function Home({ route, navigation }) {
+  const isFocused = useIsFocused();
+  const [todos, setTodos] = useState([]);
 
-  const [localData, setLocalData] = React.useState(
-    todosData.sort((a, b) => a.isCompleted - b.isCompleted)
-  );
-
-  const [isHidden, setIsHidden] = React.useState(false);
-  const navigation = useNavigation();
-
-  const handleHidePress = () => {
-    if (isHidden) {
-      setIsHidden(false);
-      setLocalData(todosData.sort((a, b) => a.isCompleted - b.isCompleted));
-    } else {
-      setIsHidden(true);
-      setLocalData(localData.filter(todo => !todo.isCompleted));
+  useEffect(() => {
+    if (isFocused && route.params?.todo) {
+      setTodos((prev) => [...prev, route.params.todo]);
     }
+  }, [route.params?.todo, isFocused]);
+
+  const renderPriority = (priority) => {
+    const color = priority === 'Alta' ? '#e53935' : priority === 'Media' ? '#fb8c00' : '#43a047';
+    return (
+      <View style={[styles.priorityTag, { backgroundColor: color }]}>
+        <Text style={styles.priorityText}>{priority}</Text>
+      </View>
+    );
   };
 
+  const renderItem = ({ item }) => (
+    <View style={styles.todoCard}>
+      <View style={styles.todoHeader}>
+        <Text style={styles.todoTitle}>{item.name}</Text>
+        {renderPriority(item.priority)}
+      </View>
+      <Text style={styles.todoTime}>🕒 {item.time} | {item.isToday ? 'Hoy' : 'Otro día'}</Text>
+      {item.description ? <Text style={styles.todoDescription}>{item.description}</Text> : null}
+      {item.activities?.length > 0 && (
+        <View style={styles.activities}>
+          {item.activities.map((act, idx) => (
+            <Text key={idx} style={styles.activityItem}>• {act}</Text>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+
   return (
-    <View style={styles.container}>
-      <Image
-        source={{ uri: 'https://cdn-icons-png.flaticon.com/512/2599/2599636.png' }}
-        style={styles.pic}
+    <SafeAreaView style={styles.container}>
+      <Text style={styles.header}>Mis Tareas</Text>
+
+      <FlatList
+        data={todos}
+        renderItem={renderItem}
+        keyExtractor={(_, index) => index.toString()}
+        contentContainerStyle={{ paddingBottom: 100 }}
       />
 
-      <View style={styles.header}>
-        <Text style={styles.title}>Hoy</Text>
-        <TouchableOpacity onPress={handleHidePress}>
-          <Text style={styles.toggleText}>
-            {isHidden ? 'Mostrar tareas completadas' : 'Ocultar tareas completadas'}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      <TodoList todosData={localData.filter(todo => todo.isToday)} />
-
-      <Text style={styles.title}>Mañana</Text>
-      <TodoList todosData={todosData.filter(todo => !todo.isToday)} />
-
       <TouchableOpacity
-        style={styles.button}
-        onPress={() => navigation.navigate('add')}
+        onPress={() => navigation.navigate('AddTodo')}
+        style={styles.fab}
       >
-        <Text style={styles.plus}>+</Text>
+        <Ionicons name="add" size={32} color="white" />
       </TouchableOpacity>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    paddingTop: 70,
-    flex: 1,
-    paddingHorizontal: 15,
-    backgroundColor: '#fff',
-  },
-  pic: {
-    width: 50,
-    height: 50,
-    marginBottom: 20,
-    borderRadius: 25,
-    alignSelf: 'flex-end',
-  },
+  container: { flex: 1, backgroundColor: '#f2f2f2', padding: 20 },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    fontSize: 28, fontWeight: 'bold',
+    marginBottom: 20, textAlign: 'center',
   },
-  title: {
-    fontSize: 34,
-    fontWeight: 'bold',
-    marginBottom: 35,
+  todoCard: {
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 15,
+    elevation: 2,
+  },
+  todoHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  todoTitle: {
+    fontSize: 18, fontWeight: 'bold', color: '#111',
+  },
+  todoTime: {
+    fontSize: 14, color: '#666', marginTop: 6,
+  },
+  todoDescription: {
+    fontSize: 15, color: '#333', marginTop: 10,
+  },
+  activities: {
     marginTop: 10,
   },
-  toggleText: {
-    color: '#3478F6',
+  activityItem: {
+    fontSize: 14,
+    color: '#444',
+    marginLeft: 10,
   },
-  button: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#000',
+  priorityTag: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+  },
+  priorityText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 12,
+  },
+  fab: {
     position: 'absolute',
-    bottom: 40,
     right: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  plus: {
-    fontSize: 40,
-    color: '#fff',
+    bottom: 30,
+    backgroundColor: '#000',
+    padding: 18,
+    borderRadius: 100,
+    elevation: 6,
   },
 });
