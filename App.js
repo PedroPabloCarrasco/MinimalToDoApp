@@ -1,12 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import { registerForPushNotificationsAsync } from './data/utils/notifications';
 
 import Home from './data/screens/Home';
 import AddTodo from './data/screens/AddTodo';
 import EditTodo from './data/screens/EditTodo';
+
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -30,6 +33,10 @@ function TasksStack({ todos, onUpdate, onDelete }) {
 
 export default function App() {
   const [todos, setTodos] = useState([]);
+
+  useEffect(() => {
+    registerForPushNotificationsAsync();
+  }, []);
 
   const addTodo = (todo) => setTodos((prev) => [...prev, todo]);
 
