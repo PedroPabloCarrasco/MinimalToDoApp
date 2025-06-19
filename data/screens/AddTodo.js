@@ -6,6 +6,7 @@ import {
 import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Notifications from 'expo-notifications';
 
 export default function AddTodo({ onAdd }) {
   const navigation = useNavigation();
@@ -61,9 +62,18 @@ export default function AddTodo({ onAdd }) {
     navigation.navigate('Tasks');
   };
 
+  const handleTestNotification = async () => {
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: "🔔 Notificación de prueba",
+        body: "Esto es una notificación local de prueba.",
+      },
+      trigger: null, // se muestra inmediatamente
+    });
+  };
+
   return (
     <View style={styles.container}>
-      {/* Flecha para volver atrás */}
       <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
         <Ionicons name="arrow-back" size={24} color="black" />
       </TouchableOpacity>
@@ -124,6 +134,10 @@ export default function AddTodo({ onAdd }) {
       <TouchableOpacity onPress={handleAddTodo} style={styles.button}>
         <Text style={styles.buttonText}>Guardar</Text>
       </TouchableOpacity>
+
+      <TouchableOpacity onPress={handleTestNotification} style={styles.testButton}>
+        <Text style={styles.testButtonText}>🔔 Probar notificación</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -145,9 +159,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 15,
   },
-  dateText: {
-    fontSize: 16,
-  },
+  dateText: { fontSize: 16 },
 
   timeButton: {
     backgroundColor: '#f0f0f0',
@@ -175,7 +187,19 @@ const styles = StyleSheet.create({
 
   button: {
     backgroundColor: '#000', padding: 14,
-    borderRadius: 10, alignItems: 'center'
+    borderRadius: 10, alignItems: 'center', marginBottom: 10
   },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+
+  testButton: {
+    backgroundColor: '#007AFF',
+    padding: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  testButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 16,
+  },
 });
