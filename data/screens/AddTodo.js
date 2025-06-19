@@ -9,16 +9,17 @@ import {
   Alert,
   Modal,
   TouchableWithoutFeedback,
-  Platform
+  Platform,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { format, isToday } from 'date-fns';
 import { es } from 'date-fns/locale';
+import Icon from 'react-native-vector-icons/Ionicons';
 
-export default function AddTodo({ navigation, addTodo, route }) {
+export default function AddTodo({ navigation, route, addTodo }) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [date, setDate] = useState(route.params?.selectedDate ? new Date(route.params.selectedDate) : new Date());
+  const [date, setDate] = useState(route.params?.selectedDate || new Date());
   const [priority, setPriority] = useState('medium');
   const [showPriorityModal, setShowPriorityModal] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -53,11 +54,17 @@ export default function AddTodo({ navigation, addTodo, route }) {
     };
 
     addTodo(newTodo);
+
+    Alert.alert(
+      'Tarea creada',
+      `Título: ${name}\nPrioridad: ${getPriorityLabel(priority)}\nFecha: ${format(date, 'PPpp', { locale: es })}`
+    );
+
     navigation.goBack();
   };
 
   const getPriorityLabel = (priority) => {
-    switch(priority) {
+    switch (priority) {
       case 'high': return 'Alta';
       case 'medium': return 'Media';
       case 'low': return 'Baja';
@@ -66,11 +73,8 @@ export default function AddTodo({ navigation, addTodo, route }) {
   };
 
   const PriorityOption = ({ level, label }) => (
-    <TouchableOpacity 
-      style={[
-        styles.priorityOption, 
-        priority === level && styles[`${level}PriorityActive`]
-      ]}
+    <TouchableOpacity
+      style={[styles.priorityOption, priority === level && styles[`${level}PriorityActive`]]}
       onPress={() => {
         setPriority(level);
         setShowPriorityModal(false);
@@ -82,12 +86,16 @@ export default function AddTodo({ navigation, addTodo, route }) {
   );
 
   return (
-    <ScrollView 
-      contentContainerStyle={styles.container}
-      keyboardShouldPersistTaps="handled"
-    >
-      <Text style={styles.title}>Nueva Tarea</Text>
+    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+      <View style={styles.topBar}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Icon name="arrow-back-circle" size={36} color="#000" />
+        </TouchableOpacity>
+        <Text style={styles.title}>Nueva Tarea</Text>
+        <View style={{ width: 36 }} /> {/* Espacio para centrar título */}
+      </View>
 
+      {/* Nombre */}
       <View style={styles.inputContainer}>
         <Text style={styles.inputTitle}>Título*</Text>
         <TextInput
@@ -101,6 +109,7 @@ export default function AddTodo({ navigation, addTodo, route }) {
         />
       </View>
 
+      {/* Descripción */}
       <View style={styles.inputContainer}>
         <Text style={styles.inputTitle}>Descripción</Text>
         <TextInput
@@ -115,67 +124,50 @@ export default function AddTodo({ navigation, addTodo, route }) {
         />
       </View>
 
+      {/* Fecha */}
       <View style={styles.inputContainer}>
         <Text style={styles.inputTitle}>Fecha</Text>
-        <TouchableOpacity 
-          onPress={() => showPicker('date')}
-          style={styles.dateTimeButton}
-          activeOpacity={0.7}
-        >
+        <TouchableOpacity onPress={() => showPicker('date')} style={styles.dateTimeButton} activeOpacity={0.7}>
           <Text style={styles.dateTimeText}>
             {format(date, "EEEE, d 'de' MMMM", { locale: es })}
           </Text>
         </TouchableOpacity>
       </View>
 
+      {/* Hora */}
       <View style={styles.inputContainer}>
         <Text style={styles.inputTitle}>Hora</Text>
-        <TouchableOpacity 
-          onPress={() => showPicker('time')}
-          style={styles.dateTimeButton}
-          activeOpacity={0.7}
-        >
+        <TouchableOpacity onPress={() => showPicker('time')} style={styles.dateTimeButton} activeOpacity={0.7}>
           <Text style={styles.dateTimeText}>
-            {format(date, "HH:mm", { locale: es })}
+            {format(date, 'HH:mm', { locale: es })}
           </Text>
         </TouchableOpacity>
       </View>
 
+      {/* Prioridad */}
       <View style={styles.inputContainer}>
         <Text style={styles.inputTitle}>Prioridad</Text>
-        <TouchableOpacity 
-          onPress={() => setShowPriorityModal(true)}
-          style={styles.dateTimeButton}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.dateTimeText}>
-            {getPriorityLabel(priority)}
-          </Text>
+        <TouchableOpacity onPress={() => setShowPriorityModal(true)} style={styles.dateTimeButton} activeOpacity={0.7}>
+          <Text style={styles.dateTimeText}>{getPriorityLabel(priority)}</Text>
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity 
-        onPress={handleAddTodo} 
-        style={[
-          styles.button,
-          !name.trim() && styles.disabledButton
-        ]}
+      {/* Botón */}
+      <TouchableOpacity
+        onPress={handleAddTodo}
+        style={[styles.button, !name.trim() && styles.disabledButton]}
         disabled={!name.trim()}
         activeOpacity={0.8}
       >
         <Text style={styles.buttonText}>Crear Tarea</Text>
       </TouchableOpacity>
 
-      <Modal
-        visible={showPriorityModal}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setShowPriorityModal(false)}
-      >
+      {/* Modal de Prioridad */}
+      <Modal visible={showPriorityModal} transparent animationType="slide" onRequestClose={() => setShowPriorityModal(false)}>
         <TouchableWithoutFeedback onPress={() => setShowPriorityModal(false)}>
           <View style={styles.modalOverlay} />
         </TouchableWithoutFeedback>
-        
+
         <View style={styles.modalContent}>
           <PriorityOption level="high" label="Alta Prioridad" />
           <PriorityOption level="medium" label="Media Prioridad" />
@@ -183,6 +175,7 @@ export default function AddTodo({ navigation, addTodo, route }) {
         </View>
       </Modal>
 
+      {/* DatePicker para iOS y Android */}
       {showDatePicker && (
         <DateTimePicker
           value={date}
@@ -191,7 +184,7 @@ export default function AddTodo({ navigation, addTodo, route }) {
           onChange={handleDateChange}
           minimumDate={new Date()}
           locale="es-ES"
-          is24Hour={true}
+          is24Hour
         />
       )}
     </ScrollView>
@@ -205,10 +198,18 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     backgroundColor: 'white',
   },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 25,
+  },
+  backButton: {
+    padding: 5,
+  },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 30,
     color: '#333',
     textAlign: 'center',
   },
@@ -294,22 +295,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
   },
-  highPriority: {
-    backgroundColor: '#FF5252',
-  },
-  mediumPriority: {
-    backgroundColor: '#FFC107',
-  },
-  lowPriority: {
-    backgroundColor: '#4CAF50',
-  },
-  highPriorityActive: {
-    backgroundColor: '#FFF6F6',
-  },
-  mediumPriorityActive: {
-    backgroundColor: '#FFFBF2',
-  },
-  lowPriorityActive: {
-    backgroundColor: '#F6FFF6',
-  },
+  highPriority: { backgroundColor: '#FF5252' },
+  mediumPriority: { backgroundColor: '#FFC107' },
+  lowPriority: { backgroundColor: '#4CAF50' },
+  highPriorityActive: { backgroundColor: '#FFF6F6' },
+  mediumPriorityActive: { backgroundColor: '#FFFBF2' },
+  lowPriorityActive: { backgroundColor: '#F6FFF6' },
 });

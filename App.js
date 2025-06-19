@@ -1,3 +1,4 @@
+// Archivo: App.js
 import React, { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NavigationContainer } from '@react-navigation/native';
@@ -8,73 +9,71 @@ import AddTodo from './data/screens/AddTodo';
 
 const Stack = createNativeStackNavigator();
 
-const STORAGE_KEY = '@my_todos'; // clave para AsyncStorage
-
 export default function App() {
   const [todos, setTodos] = useState([]);
+  const [points, setPoints] = useState(0);
+  const [achievements, setAchievements] = useState([]);
 
-  // Cargar tareas guardadas al iniciar la app
   useEffect(() => {
-    const loadTodos = async () => {
+    const loadData = async () => {
       try {
-        const storedTodos = await AsyncStorage.getItem(STORAGE_KEY);
-        if (storedTodos) setTodos(JSON.parse(storedTodos));
+        const todosData = await AsyncStorage.getItem('@todos');
+        const pointsData = await AsyncStorage.getItem('@points');
+        const achData = await AsyncStorage.getItem('@achievements');
+
+        if (todosData) setTodos(JSON.parse(todosData));
+        if (pointsData) setPoints(parseInt(pointsData, 10));
+        if (achData) setAchievements(JSON.parse(achData));
       } catch (error) {
-        console.error('Error cargando tareas:', error);
+        console.log('Error cargando datos:', error);
       }
     };
-    loadTodos();
+    loadData();
   }, []);
 
-  // Guardar tareas en AsyncStorage cada vez que cambian
   useEffect(() => {
-    const saveTodos = async () => {
-      try {
-        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(todos));
-      } catch (error) {
-        console.error('Error guardando tareas:', error);
-      }
-    };
-    saveTodos();
+    AsyncStorage.setItem('@todos', JSON.stringify(todos));
   }, [todos]);
 
+  useEffect(() => {
+    AsyncStorage.setItem('@points', points.toString());
+  }, [points]);
+
+  useEffect(() => {
+    AsyncStorage.setItem('@achievements', JSON.stringify(achievements));
+  }, [achievements]);
+
   const addTodo = (newTodo) => {
-    setTodos(currentTodos => [...currentTodos, newTodo]);
+    setTodos((prev) => [...prev, newTodo]);
   };
 
   const updateTodos = (updatedTodos) => {
     setTodos(updatedTodos);
+    const completedCount = updatedTodos.filter((t) => t.isCompleted).length;
+    setPoints(completedCount * 10);
+
+    if (completedCount >= 5 && !achievements.includes('5tasks')) {
+      setAchievements((prev) => [...prev, '5tasks']);
+      alert('🎉 ¡Logro desbloqueado: Completaste 5 tareas!');
+    }
   };
 
   return (
     <NavigationContainer>
-      <Stack.Navigator>
-        <Stack.Screen
-          name="Home"
-          options={{ headerShown: false }}
-        >
-          {props => (
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="Home">
+          {(props) => (
             <Home
               {...props}
               todos={todos}
               onUpdate={updateTodos}
+              points={points}
+              achievements={achievements}
             />
           )}
         </Stack.Screen>
-        <Stack.Screen
-          name="AddTodo"
-          options={{
-            presentation: 'transparentModal',
-            animation: 'slide_from_bottom',
-            headerShown: false,
-          }}
-        >
-          {props => (
-            <AddTodo
-              {...props}
-              addTodo={addTodo}
-            />
-          )}
+        <Stack.Screen name="AddTodo">
+          {(props) => <AddTodo {...props} addTodo={addTodo} />}
         </Stack.Screen>
       </Stack.Navigator>
     </NavigationContainer>
