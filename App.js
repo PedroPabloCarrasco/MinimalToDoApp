@@ -14,6 +14,7 @@ export default function App() {
   const [points, setPoints] = useState(0);
   const [achievements, setAchievements] = useState([]);
 
+  // Cargar datos desde AsyncStorage
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -31,6 +32,7 @@ export default function App() {
     loadData();
   }, []);
 
+  // Guardar datos en AsyncStorage
   useEffect(() => {
     AsyncStorage.setItem('@todos', JSON.stringify(todos));
   }, [todos]);
@@ -43,10 +45,16 @@ export default function App() {
     AsyncStorage.setItem('@achievements', JSON.stringify(achievements));
   }, [achievements]);
 
+  // Agregar nueva tarea
   const addTodo = (newTodo) => {
-    setTodos((prev) => [...prev, newTodo]);
+    setTodos((prevTodos) => {
+      const updatedTodos = [...prevTodos, newTodo];
+      AsyncStorage.setItem('@todos', JSON.stringify(updatedTodos));
+      return updatedTodos;
+    });
   };
 
+  // Actualizar lista de tareas (marcar completadas, etc.)
   const updateTodos = (updatedTodos) => {
     setTodos(updatedTodos);
     const completedCount = updatedTodos.filter((t) => t.isCompleted).length;
@@ -56,6 +64,16 @@ export default function App() {
       setAchievements((prev) => [...prev, '5tasks']);
       alert('🎉 ¡Logro desbloqueado: Completaste 5 tareas!');
     }
+    if (completedCount >= 10 && !achievements.includes('10tasks')) {
+      setAchievements((prev) => [...prev, '10tasks']);
+      alert('🏆 ¡Logro desbloqueado: Completaste 10 tareas!');
+    }
+  };
+
+  // Eliminar tarea
+  const deleteTodo = (id) => {
+    const updatedTodos = todos.filter((todo) => todo.id !== id);
+    setTodos(updatedTodos);
   };
 
   return (
@@ -67,6 +85,7 @@ export default function App() {
               {...props}
               todos={todos}
               onUpdate={updateTodos}
+              deleteTodo={deleteTodo}
               points={points}
               achievements={achievements}
             />
