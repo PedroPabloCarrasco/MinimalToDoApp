@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import * as Notifications from 'expo-notifications';
 
 import Home from './data/screens/Home';
 import AddTodo from './data/screens/AddTodo';
@@ -13,6 +14,17 @@ export default function App() {
   const [todos, setTodos] = useState([]);
   const [points, setPoints] = useState(0);
   const [achievements, setAchievements] = useState([]);
+
+  // Pedir permisos para notificaciones
+  useEffect(() => {
+    const getPermissions = async () => {
+      const { status } = await Notifications.getPermissionsAsync();
+      if (status !== 'granted') {
+        await Notifications.requestPermissionsAsync();
+      }
+    };
+    getPermissions();
+  }, []);
 
   // Cargar datos desde AsyncStorage
   useEffect(() => {
