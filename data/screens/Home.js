@@ -302,6 +302,17 @@ export default function Home({ todos = [], onUpdate, deleteTodo, points, achieve
         <Text style={styles.collabButtonText}></Text>
       </TouchableOpacity>
 
+      {/* Botón para ir a Finanzas */}
+<TouchableOpacity
+  style={[styles.collabButton, { bottom: 160, backgroundColor: '#4CAF50' }]}
+  onPress={() => navigation.navigate('Finance')}
+  activeOpacity={0.8}
+>
+  <Ionicons name="wallet-outline" size={28} color="#fff" />
+  <Text style={styles.collabButtonText}>Finanzas</Text>
+</TouchableOpacity>
+
+
       {/* Botón para agregar nueva tarea */}
       <TouchableOpacity
         style={styles.addButton}
