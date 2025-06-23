@@ -3,10 +3,11 @@ import React, { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import * as Notifications from 'expo-notifications';
 
 import Home from './data/screens/Home';
 import AddTodo from './data/screens/AddTodo';
+import Finance from './data/screens/Finance';
+import AddExpense from './data/screens/AddExpense';
 
 const Stack = createNativeStackNavigator();
 
@@ -15,18 +16,6 @@ export default function App() {
   const [points, setPoints] = useState(0);
   const [achievements, setAchievements] = useState([]);
 
-  // Pedir permisos para notificaciones
-  useEffect(() => {
-    const getPermissions = async () => {
-      const { status } = await Notifications.getPermissionsAsync();
-      if (status !== 'granted') {
-        await Notifications.requestPermissionsAsync();
-      }
-    };
-    getPermissions();
-  }, []);
-
-  // Cargar datos desde AsyncStorage
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -44,7 +33,6 @@ export default function App() {
     loadData();
   }, []);
 
-  // Guardar datos en AsyncStorage
   useEffect(() => {
     AsyncStorage.setItem('@todos', JSON.stringify(todos));
   }, [todos]);
@@ -57,7 +45,6 @@ export default function App() {
     AsyncStorage.setItem('@achievements', JSON.stringify(achievements));
   }, [achievements]);
 
-  // Agregar nueva tarea
   const addTodo = (newTodo) => {
     setTodos((prevTodos) => {
       const updatedTodos = [...prevTodos, newTodo];
@@ -66,7 +53,6 @@ export default function App() {
     });
   };
 
-  // Actualizar lista de tareas (marcar completadas, etc.)
   const updateTodos = (updatedTodos) => {
     setTodos(updatedTodos);
     const completedCount = updatedTodos.filter((t) => t.isCompleted).length;
@@ -82,7 +68,6 @@ export default function App() {
     }
   };
 
-  // Eliminar tarea
   const deleteTodo = (id) => {
     const updatedTodos = todos.filter((todo) => todo.id !== id);
     setTodos(updatedTodos);
@@ -91,8 +76,9 @@ export default function App() {
   return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="Home">
-          {(props) => (
+        <Stack.Screen
+          name="Home"
+          component={(props) => (
             <Home
               {...props}
               todos={todos}
@@ -102,10 +88,13 @@ export default function App() {
               achievements={achievements}
             />
           )}
-        </Stack.Screen>
-        <Stack.Screen name="AddTodo">
-          {(props) => <AddTodo {...props} addTodo={addTodo} />}
-        </Stack.Screen>
+        />
+        <Stack.Screen
+          name="AddTodo"
+          component={(props) => <AddTodo {...props} addTodo={addTodo} />}
+        />
+        <Stack.Screen name="Finance" component={Finance} />
+        <Stack.Screen name="AddExpense" component={AddExpense} />
       </Stack.Navigator>
     </NavigationContainer>
   );

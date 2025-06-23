@@ -61,6 +61,15 @@ export default function Home({ todos = [], onUpdate, deleteTodo, points, achieve
     setIsHidden(false);
   };
 
+  const priorityTextToValue = (text) => {
+    switch (text.toLowerCase()) {
+      case 'alta': return 'high';
+      case 'media': return 'medium';
+      case 'baja': return 'low';
+      default: return 'all';
+    }
+  };
+
   const sortTodos = (list) => {
     if (sortBy === 'priority') {
       const priorityOrder = { high: 1, medium: 2, low: 3, undefined: 4 };
@@ -89,7 +98,8 @@ export default function Home({ todos = [], onUpdate, deleteTodo, points, achieve
         (todo.description && todo.description.toLowerCase().includes(searchText.toLowerCase()));
 
       const matchesPriority =
-        selectedPriority === 'all' || todo.priority === selectedPriority;
+        selectedPriority === 'all' ||
+        todo.priority === priorityTextToValue(selectedPriority);
 
       return matchesDate && matchesStatus && matchesSearch && matchesPriority;
     })
@@ -204,26 +214,31 @@ export default function Home({ todos = [], onUpdate, deleteTodo, points, achieve
         />
 
         <View style={styles.priorityFilterContainer}>
-          {['all', 'Alta', 'Media', 'Baja'].map((level) => (
-            <TouchableOpacity
-              key={level}
-              style={[
-                styles.priorityFilterButton,
-                selectedPriority === level && styles.priorityFilterButtonActive,
-                { borderColor: getPriorityColor(level === 'all' ? undefined : level) }
-              ]}
-              onPress={() => setSelectedPriority(level)}
-            >
-              <Text
+          {['all', 'Alta', 'Media', 'Baja'].map((label) => {
+            const isSelected = selectedPriority === label;
+            const priorityKey = label === 'all' ? undefined : priorityTextToValue(label);
+
+            return (
+              <TouchableOpacity
+                key={label}
                 style={[
-                  styles.priorityFilterText,
-                  selectedPriority === level && styles.priorityFilterTextActive,
+                  styles.priorityFilterButton,
+                  isSelected && styles.priorityFilterButtonActive,
+                  { borderColor: getPriorityColor(priorityKey) }
                 ]}
+                onPress={() => setSelectedPriority(label)}
               >
-                {level === 'all' ? 'Todas' : level.charAt(0).toUpperCase() + level.slice(1)}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                <Text
+                  style={[
+                    styles.priorityFilterText,
+                    isSelected && styles.priorityFilterTextActive,
+                  ]}
+                >
+                  {label === 'all' ? 'Todas' : label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         <View style={styles.filterButtonsRow}>
@@ -277,6 +292,17 @@ export default function Home({ todos = [], onUpdate, deleteTodo, points, achieve
         </View>
       </ScrollView>
 
+      {/* Botón para espacio colaborativo */}
+      <TouchableOpacity
+        style={[styles.collabButton, { backgroundColor: isDarkMode ? '#3478F6' : '#3478F6' }]}
+        onPress={() => navigation.navigate('CollaborativeBoard')}
+        activeOpacity={0.8}
+      >
+        <Ionicons name="people-outline" size={28} color="#fff" />
+        <Text style={styles.collabButtonText}></Text>
+      </TouchableOpacity>
+
+      {/* Botón para agregar nueva tarea */}
       <TouchableOpacity
         style={styles.addButton}
         onPress={() => navigation.navigate('AddTodo', { selectedDate })}
@@ -422,6 +448,29 @@ const lightStyles = StyleSheet.create({
     color: '#555',
     marginTop: 6,
   },
+
+  // Nuevo botón colaborativo
+  collabButton: {
+    position: 'absolute',
+    bottom: 100,
+    right: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 30,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  collabButtonText: {
+    color: '#fff',
+    fontWeight: '700',
+    marginLeft: 8,
+    fontSize: 16,
+  },
 });
 
 const darkStyles = StyleSheet.create({
@@ -558,5 +607,27 @@ const darkStyles = StyleSheet.create({
     color: '#bbb',
     marginTop: 6,
   },
-});
 
+  // Nuevo botón colaborativo
+  collabButton: {
+    position: 'absolute',
+    bottom: 100,
+    right: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 30,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  collabButtonText: {
+    color: '#fff',
+    fontWeight: '700',
+    marginLeft: 8,
+    fontSize: 16,
+  },
+});
