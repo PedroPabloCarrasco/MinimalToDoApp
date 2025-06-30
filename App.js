@@ -4,7 +4,7 @@ import { TouchableOpacity } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons'; // Importa Ionicons para los iconos
+import { Ionicons } from '@expo/vector-icons';
 
 import Home from './data/screens/Home';
 import AddTodo from './data/screens/AddTodo';
@@ -21,7 +21,6 @@ export default function App() {
   const [achievements, setAchievements] = useState([]);
   const [habits, setHabits] = useState([]);
 
-  // Cargar todos los datos al iniciar
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -43,7 +42,6 @@ export default function App() {
     loadData();
   }, []);
 
-  // Guardar datos cuando cambian
   useEffect(() => {
     const saveData = async () => {
       try {
@@ -69,7 +67,6 @@ export default function App() {
     const completedCount = updatedTodos.filter((t) => t.isCompleted).length;
     setPoints(completedCount * 10);
 
-    // Lógica de logros
     const newAchievements = [...achievements];
     if (completedCount >= 5 && !newAchievements.includes('5tasks')) {
       newAchievements.push('5tasks');
@@ -89,24 +86,28 @@ export default function App() {
   return (
     <NavigationContainer>
       <Stack.Navigator 
-        screenOptions={({ navigation }) => ({
+        screenOptions={({ navigation, route }) => ({
           headerShown: true,
           animation: 'fade',
           headerStyle: {
             backgroundColor: '#f8f9fa',
           },
-          headerTintColor: '#4CAF50', // Color verde para el texto e iconos
+          headerTintColor: '#4CAF50',
           headerTitleStyle: {
             fontWeight: 'bold',
           },
-          headerLeft: () => (
-            <TouchableOpacity 
-              onPress={() => navigation.goBack()}
-              style={{ marginLeft: 10 }}
-            >
-              <Ionicons name="arrow-back" size={24} color="#4CAF50" />
-            </TouchableOpacity>
-          ),
+          headerLeft: () => {
+            if (route.name === 'Home') return null;
+            return (
+              <TouchableOpacity 
+                onPress={() => navigation.goBack()}
+                style={{ marginLeft: 10 }}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Ionicons name="arrow-back" size={24} color="#4CAF50" />
+              </TouchableOpacity>
+            );
+          },
         })}
       >
         <Stack.Screen 
@@ -124,40 +125,39 @@ export default function App() {
             />
           )}
         </Stack.Screen>
-        
+
         <Stack.Screen 
           name="AddTodo" 
           options={{ title: 'Agregar Tarea' }}
         >
           {(props) => <AddTodo {...props} addTodo={addTodo} />}
         </Stack.Screen>
-        
+
         <Stack.Screen 
           name="Finance" 
           component={Finance} 
           options={{ title: 'Finanzas' }} 
         />
-        
+
         <Stack.Screen 
           name="AddExpense" 
           component={AddExpense} 
           options={{ title: 'Agregar Gasto' }} 
         />
-        
+
         <Stack.Screen 
           name="WeeklyCalendar"
           options={{ title: 'Calendario Semanal' }}
         >
           {(props) => <WeeklyCalendar {...props} todos={todos} />}
         </Stack.Screen>
-        
+
         <Stack.Screen 
           name="Habits"
           options={{ title: 'Mis Hábitos' }}
         >
-          {(props) => (
+          {() => (
             <Habits
-              {...props}
               habits={habits}
               updateHabits={setHabits}
             />
