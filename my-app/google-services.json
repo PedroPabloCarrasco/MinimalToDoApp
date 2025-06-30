@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "971036663377",
+    "project_id": "colaborativoapp-9fafe",
+    "storage_bucket": "colaborativoapp-9fafe.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:971036663377:android:8b426f43d87855bdffe270",
+        "android_client_info": {
+          "package_name": "com.tuusername.minimaltodoapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDLxXCU5MEgYEdEUHgHw_3nj1OFpcP747M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,63 +1,36 @@
-// src/screens/Habits.js
-import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  FlatList, 
-  TouchableOpacity, 
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
   TextInput,
   Alert,
   useColorScheme
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 
-const STORAGE_KEY = 'USER_HABITS';
-
-export default function Habits() {
-  const [habits, setHabits] = useState([]);
+export default function Habits({ habits, updateHabits }) {
   const [newHabit, setNewHabit] = useState('');
   const [editingHabit, setEditingHabit] = useState(null);
   const [editText, setEditText] = useState('');
   const colorScheme = useColorScheme();
   const isDarkMode = colorScheme === 'dark';
 
-  useEffect(() => {
-    loadHabits();
-  }, []);
-
-  const loadHabits = async () => {
-    try {
-      const savedHabits = await AsyncStorage.getItem(STORAGE_KEY);
-      if (savedHabits) setHabits(JSON.parse(savedHabits));
-    } catch (error) {
-      console.error('Error loading habits:', error);
-    }
-  };
-
-  const saveHabits = async (updatedHabits) => {
-    try {
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedHabits));
-      setHabits(updatedHabits);
-    } catch (error) {
-      console.error('Error saving habits:', error);
-    }
-  };
-
   const addHabit = () => {
     if (newHabit.trim() === '') return;
-    
+
     const habit = {
       id: Date.now().toString(),
       name: newHabit.trim(),
       streak: 0,
       completedToday: false,
+      lastCompleted: null,
       createdAt: new Date().toISOString()
     };
 
-    const updatedHabits = [...habits, habit];
-    saveHabits(updatedHabits);
+    updateHabits([...habits, habit]);
     setNewHabit('');
   };
 
@@ -66,23 +39,22 @@ export default function Habits() {
       if (habit.id === habitId) {
         const today = new Date().toISOString().split('T')[0];
         const lastCompleted = habit.lastCompleted?.split('T')[0];
-        
-        // Si ya se completó hoy, resetear
+
         if (habit.completedToday) {
           return {
             ...habit,
             completedToday: false,
-            streak: Math.max(0, habit.streak - 1)
+            streak: Math.max(0, habit.streak - 1),
+            lastCompleted: null
           };
         }
-        
-        // Si se completó ayer, incrementar racha
+
         const yesterday = new Date();
         yesterday.setDate(yesterday.getDate() - 1);
         const yesterdayStr = yesterday.toISOString().split('T')[0];
-        
+
         const newStreak = lastCompleted === yesterdayStr ? habit.streak + 1 : 1;
-        
+
         return {
           ...habit,
           completedToday: true,
@@ -92,8 +64,8 @@ export default function Habits() {
       }
       return habit;
     });
-    
-    saveHabits(updatedHabits);
+
+    updateHabits(updatedHabits);
   };
 
   const startEditing = (habit) => {
@@ -102,10 +74,10 @@ export default function Habits() {
   };
 
   const saveEdit = () => {
-    const updatedHabits = habits.map(habit => 
+    const updatedHabits = habits.map(habit =>
       habit.id === editingHabit ? { ...habit, name: editText } : habit
     );
-    saveHabits(updatedHabits);
+    updateHabits(updatedHabits);
     setEditingHabit(null);
     setEditText('');
   };
@@ -116,12 +88,11 @@ export default function Habits() {
       '¿Estás seguro de que quieres eliminar este hábito?',
       [
         { text: 'Cancelar', style: 'cancel' },
-        { 
-          text: 'Eliminar', 
+        {
+          text: 'Eliminar',
           style: 'destructive',
           onPress: () => {
-            const updatedHabits = habits.filter(h => h.id !== habitId);
-            saveHabits(updatedHabits);
+            updateHabits(habits.filter(h => h.id !== habitId));
           }
         }
       ]
@@ -130,18 +101,18 @@ export default function Habits() {
 
   const renderHabitItem = ({ item }) => (
     <View style={[
-      styles.habitItem, 
+      styles.habitItem,
       isDarkMode && styles.habitItemDark,
       item.completedToday && styles.completedHabit
     ]}>
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.checkbox}
         onPress={() => toggleHabitCompletion(item.id)}
       >
-        <Ionicons 
-          name={item.completedToday ? 'checkbox' : 'square-outline'} 
-          size={24} 
-          color={isDarkMode ? '#4CAF50' : '#4CAF50'} 
+        <Ionicons
+          name={item.completedToday ? 'checkbox' : 'square-outline'}
+          size={24}
+          color="#4CAF50"
         />
       </TouchableOpacity>
 
@@ -155,7 +126,7 @@ export default function Habits() {
           onBlur={saveEdit}
         />
       ) : (
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.habitTextContainer}
           onPress={() => startEditing(item)}
         >
@@ -163,129 +134,23 @@ export default function Habits() {
             {item.name}
           </Text>
           <Text style={[styles.streakText, isDarkMode && styles.textDark]}>
-            🔥 Racha: {item.streak} días
+            🔥 Racha: {item.streak} día{item.streak !== 1 ? 's' : ''}
           </Text>
         </TouchableOpacity>
       )}
 
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.deleteButton}
         onPress={() => deleteHabit(item.id)}
       >
-        <Ionicons 
-          name="trash-outline" 
-          size={22} 
-          color={isDarkMode ? '#FF5252' : '#FF5252'} 
+        <Ionicons
+          name="trash-outline"
+          size={22}
+          color="#FF5252"
         />
       </TouchableOpacity>
     </View>
   );
-
-  const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: isDarkMode ? '#121212' : '#f1f1f1',
-      padding: 20,
-    },
-    title: {
-      fontSize: 26,
-      fontWeight: '700',
-      color: isDarkMode ? '#4CAF50' : '#2E7D32',
-      marginBottom: 12,
-      textAlign: 'center',
-    },
-    subtitle: {
-      fontSize: 16,
-      color: isDarkMode ? '#aaa' : '#555',
-      textAlign: 'center',
-      marginBottom: 20,
-    },
-    inputContainer: {
-      flexDirection: 'row',
-      marginBottom: 20,
-    },
-    input: {
-      flex: 1,
-      backgroundColor: isDarkMode ? '#333' : '#fff',
-      color: isDarkMode ? '#fff' : '#000',
-      borderRadius: 8,
-      padding: 12,
-      marginRight: 10,
-      fontSize: 16,
-    },
-    addButton: {
-      backgroundColor: '#4CAF50',
-      borderRadius: 8,
-      padding: 12,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    habitItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: '#fff',
-      borderRadius: 8,
-      padding: 15,
-      marginBottom: 10,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.1,
-      shadowRadius: 2,
-      elevation: 2,
-    },
-    habitItemDark: {
-      backgroundColor: '#333',
-    },
-    completedHabit: {
-      opacity: 0.7,
-      borderLeftWidth: 4,
-      borderLeftColor: '#4CAF50',
-    },
-    checkbox: {
-      marginRight: 15,
-    },
-    habitTextContainer: {
-      flex: 1,
-    },
-    habitName: {
-      fontSize: 16,
-      color: '#333',
-      marginBottom: 4,
-    },
-    textDark: {
-      color: '#eee',
-    },
-    streakText: {
-      fontSize: 12,
-      color: '#666',
-    },
-    deleteButton: {
-      marginLeft: 10,
-    },
-    editInput: {
-      flex: 1,
-      backgroundColor: '#fff',
-      color: '#000',
-      borderRadius: 4,
-      padding: 8,
-      marginRight: 10,
-      fontSize: 16,
-    },
-    editInputDark: {
-      backgroundColor: '#444',
-      color: '#fff',
-    },
-    emptyState: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    emptyText: {
-      fontSize: 16,
-      color: isDarkMode ? '#aaa' : '#666',
-      textAlign: 'center',
-    },
-  });
 
   return (
     <View style={styles.container}>
@@ -308,6 +173,12 @@ export default function Habits() {
 
       {habits.length === 0 ? (
         <View style={styles.emptyState}>
+          <Ionicons
+            name="repeat-outline"
+            size={50}
+            color={isDarkMode ? '#555' : '#ccc'}
+            style={{ marginBottom: 15 }}
+          />
           <Text style={styles.emptyText}>No hay hábitos registrados</Text>
           <Text style={styles.emptyText}>¡Agrega tu primer hábito!</Text>
         </View>
@@ -322,3 +193,111 @@ export default function Habits() {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f1f1f1',
+    padding: 20,
+  },
+  title: {
+    fontSize: 26,
+    fontWeight: '700',
+    color: '#2E7D32',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#555',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    marginBottom: 20,
+  },
+  input: {
+    flex: 1,
+    backgroundColor: '#fff',
+    color: '#000',
+    borderRadius: 8,
+    padding: 12,
+    marginRight: 10,
+    fontSize: 16,
+  },
+  addButton: {
+    backgroundColor: '#4CAF50',
+    borderRadius: 8,
+    padding: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  habitItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    padding: 15,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  habitItemDark: {
+    backgroundColor: '#333',
+  },
+  completedHabit: {
+    opacity: 0.8,
+    borderLeftWidth: 4,
+    borderLeftColor: '#4CAF50',
+  },
+  checkbox: {
+    marginRight: 15,
+  },
+  habitTextContainer: {
+    flex: 1,
+  },
+  habitName: {
+    fontSize: 16,
+    color: '#333',
+    marginBottom: 4,
+  },
+  textDark: {
+    color: '#eee',
+  },
+  streakText: {
+    fontSize: 12,
+    color: '#666',
+  },
+  deleteButton: {
+    marginLeft: 10,
+  },
+  editInput: {
+    flex: 1,
+    backgroundColor: '#fff',
+    color: '#000',
+    borderRadius: 4,
+    padding: 8,
+    marginRight: 10,
+    fontSize: 16,
+  },
+  editInputDark: {
+    backgroundColor: '#444',
+    color: '#fff',
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 50,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+});

@@ -171,7 +171,7 @@ export default function Home({ todos = [], onUpdate, deleteTodo, points, achieve
         </View>
 
         <Image
-          source={{ uri: 'https://cdn-icons-png.flaticon.com/512/2599/2599636.png' }}
+          source={require('../../assets/icon.png')} 
           style={styles.pic}
         />
 
@@ -292,26 +292,25 @@ export default function Home({ todos = [], onUpdate, deleteTodo, points, achieve
         </View>
       </ScrollView>
 
-      {/* Botón para espacio colaborativo */}
+      {/* Botón para Hábitos */}
       <TouchableOpacity
-        style={[styles.collabButton, { backgroundColor: isDarkMode ? '#3478F6' : '#3478F6' }]}
-        onPress={() => navigation.navigate('CollaborativeBoard')}
+        style={[styles.collabButton, { backgroundColor: '#00BCD4' }]}
+        onPress={() => navigation.navigate('Habits')}
         activeOpacity={0.8}
       >
-        <Ionicons name="people-outline" size={28} color="#fff" />
-        <Text style={styles.collabButtonText}></Text>
+        <Ionicons name="repeat-outline" size={28} color="#fff" />
+        <Text style={styles.collabButtonText}>Hábitos</Text>
       </TouchableOpacity>
 
       {/* Botón para ir a Finanzas */}
-<TouchableOpacity
-  style={[styles.collabButton, { bottom: 160, backgroundColor: '#4CAF50' }]}
-  onPress={() => navigation.navigate('Finance')}
-  activeOpacity={0.8}
->
-  <Ionicons name="wallet-outline" size={28} color="#fff" />
-  <Text style={styles.collabButtonText}>Finanzas</Text>
-</TouchableOpacity>
-
+      <TouchableOpacity
+        style={[styles.collabButton, { bottom: 160, backgroundColor: '#4CAF50' }]}
+        onPress={() => navigation.navigate('Finance')}
+        activeOpacity={0.8}
+      >
+        <Ionicons name="wallet-outline" size={28} color="#fff" />
+        <Text style={styles.collabButtonText}>Finanzas</Text>
+      </TouchableOpacity>
 
       {/* Botón para agregar nueva tarea */}
       <TouchableOpacity
@@ -460,7 +459,7 @@ const lightStyles = StyleSheet.create({
     marginTop: 6,
   },
 
-  // Nuevo botón colaborativo
+  // Estilo para botones flotantes
   collabButton: {
     position: 'absolute',
     bottom: 100,
@@ -619,7 +618,7 @@ const darkStyles = StyleSheet.create({
     marginTop: 6,
   },
 
-  // Nuevo botón colaborativo
+  // Estilo para botones flotantes
   collabButton: {
     position: 'absolute',
     bottom: 100,
