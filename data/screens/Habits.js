@@ -25,6 +25,7 @@ export default function Habits({ habits, updateHabits }) {
       id: Date.now().toString(),
       name: newHabit.trim(),
       streak: 0,
+      longestStreak: 0, // ✅ Nuevo campo
       completedToday: false,
       lastCompleted: null,
       createdAt: new Date().toISOString()
@@ -54,11 +55,25 @@ export default function Habits({ habits, updateHabits }) {
         const yesterdayStr = yesterday.toISOString().split('T')[0];
 
         const newStreak = lastCompleted === yesterdayStr ? habit.streak + 1 : 1;
+        const updatedLongestStreak = Math.max(habit.longestStreak || 0, newStreak);
+
+        // 🎉 Logros por racha
+        if (newStreak === 3) {
+          Alert.alert('🎯 ¡Buen comienzo!', '¡3 días seguidos!');
+        } else if (newStreak === 7) {
+          Alert.alert('🏆 ¡Increíble!', '¡7 días seguidos!');
+        } else if (newStreak === 30) {
+          Alert.alert('🌟 ¡Maestro de hábitos!', '¡30 días de constancia!');
+        }
+
+        // 🎮 Recompensas (opcional)
+        // setPoints(prev => prev + newStreak * 2); // Si estás usando puntos
 
         return {
           ...habit,
           completedToday: true,
           streak: newStreak,
+          longestStreak: updatedLongestStreak,
           lastCompleted: new Date().toISOString()
         };
       }
@@ -134,7 +149,10 @@ export default function Habits({ habits, updateHabits }) {
             {item.name}
           </Text>
           <Text style={[styles.streakText, isDarkMode && styles.textDark]}>
-            🔥 Racha: {item.streak} día{item.streak !== 1 ? 's' : ''}
+            🔥 Racha actual: {item.streak} día{item.streak !== 1 ? 's' : ''}
+          </Text>
+          <Text style={[styles.streakText, isDarkMode && styles.textDark]}>
+            🏅 Racha máxima: {item.longestStreak || 0} día{item.longestStreak !== 1 ? 's' : ''}
           </Text>
         </TouchableOpacity>
       )}
