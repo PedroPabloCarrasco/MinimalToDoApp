@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -11,56 +11,54 @@ import {
   TextInput,
   Platform,
   useColorScheme,
+  Animated,
+  Easing,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { PriorityIndicator } from '../../components/PriorityIndicator';
-import { format, isSameDay, isWithinInterval } from 'date-fns';
+import { format, isSameDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Ionicons } from '@expo/vector-icons';
 
+// Asegúrate de tener este componente PriorityIndicator en ../../components/PriorityIndicator
+import { PriorityIndicator } from '../../components/PriorityIndicator';
+
 const STORAGE_KEY = 'APP_DARK_MODE';
 
-export default function Home({ todos = [], onUpdate, deleteTodo, points, achievements }) {
+export default function Home({ todos = [], onUpdate, deleteTodo, points = 0, achievements = [] }) {
   const systemColorScheme = useColorScheme();
+  const navigation = useNavigation();
 
-  // Estado para modo oscuro con persistencia
   const [isDarkMode, setIsDarkMode] = useState(systemColorScheme === 'dark');
-
-  useEffect(() => {
-    // Al montar, leer el modo guardado
-    AsyncStorage.getItem(STORAGE_KEY).then(value => {
-      if (value !== null) {
-        setIsDarkMode(value === 'true');
-      }
-    });
-  }, []);
-
-  useEffect(() => {
-    // Guardar cambio de modo en AsyncStorage
-    AsyncStorage.setItem(STORAGE_KEY, isDarkMode.toString());
-  }, [isDarkMode]);
-
   const [isHidden, setIsHidden] = useState(false);
-  const [showDatePicker, setShowDatePicker] = useState(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
   const [searchText, setSearchText] = useState('');
   const [selectedPriority, setSelectedPriority] = useState('all');
-  const [fromDate, setFromDate] = useState(null);
-  const [toDate, setToDate] = useState(null);
-  const [sortBy, setSortBy] = useState('time'); // 'time' o 'priority'
-  const navigation = useNavigation();
+  const [sortBy, setSortBy] = useState('time');
 
+  // Cargar modo oscuro guardado
+  useEffect(() => {
+    AsyncStorage.getItem(STORAGE_KEY).then(value => {
+      if (value !== null) setIsDarkMode(value === 'true');
+    });
+  }, []);
+
+  // Guardar modo oscuro en AsyncStorage
+  useEffect(() => {
+    AsyncStorage.setItem(STORAGE_KEY, isDarkMode.toString());
+  }, [isDarkMode]);
+
+  // Limpiar filtros
   const clearFilters = () => {
     setSearchText('');
     setSelectedPriority('all');
     setSelectedDate(null);
-    setFromDate(null);
-    setToDate(null);
     setIsHidden(false);
   };
 
+  // Convierte texto prioridad a clave interna
   const priorityTextToValue = (text) => {
     switch (text.toLowerCase()) {
       case 'alta': return 'high';
@@ -70,6 +68,7 @@ export default function Home({ todos = [], onUpdate, deleteTodo, points, achieve
     }
   };
 
+  // Ordenar tareas
   const sortTodos = (list) => {
     if (sortBy === 'priority') {
       const priorityOrder = { high: 1, medium: 2, low: 3, undefined: 4 };
@@ -80,23 +79,16 @@ export default function Home({ todos = [], onUpdate, deleteTodo, points, achieve
     return list.slice().sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
   };
 
+  // Filtrar tareas
   const filteredTodos = sortTodos(
     todos.filter(todo => {
       const todoDate = new Date(todo.dueDate);
 
-      const matchesDate =
-        (!selectedDate && !fromDate && !toDate) ||
-        (selectedDate && isSameDay(todoDate, selectedDate)) ||
-        (fromDate && toDate && isWithinInterval(todoDate, { start: fromDate, end: toDate })) ||
-        (fromDate && !toDate && todoDate >= fromDate) ||
-        (!fromDate && toDate && todoDate <= toDate);
-
+      const matchesDate = !selectedDate || isSameDay(todoDate, selectedDate);
       const matchesStatus = !(isHidden && todo.isCompleted);
-
       const matchesSearch =
         todo.title.toLowerCase().includes(searchText.toLowerCase()) ||
         (todo.description && todo.description.toLowerCase().includes(searchText.toLowerCase()));
-
       const matchesPriority =
         selectedPriority === 'all' ||
         todo.priority === priorityTextToValue(selectedPriority);
@@ -105,11 +97,11 @@ export default function Home({ todos = [], onUpdate, deleteTodo, points, achieve
     })
   );
 
-  // Estadísticas
   const totalTasks = todos.length;
   const completedTasks = todos.filter(t => t.isCompleted).length;
   const pendingTasks = totalTasks - completedTasks;
 
+  // Cambiar estado completado de tarea
   const toggleTaskCompletion = (taskId) => {
     const updatedTodos = todos.map(todo =>
       todo.id === taskId ? { ...todo, isCompleted: !todo.isCompleted } : todo
@@ -117,6 +109,7 @@ export default function Home({ todos = [], onUpdate, deleteTodo, points, achieve
     onUpdate(updatedTodos);
   };
 
+  // Confirmar eliminación
   const confirmDelete = (id) => {
     Alert.alert('¿Eliminar tarea?', '¿Estás seguro de que deseas eliminar esta tarea?', [
       { text: 'Cancelar', style: 'cancel' },
@@ -124,34 +117,85 @@ export default function Home({ todos = [], onUpdate, deleteTodo, points, achieve
     ]);
   };
 
-  const renderTaskItem = ({ item }) => (
-    <View style={[styles.taskItem, { borderLeftColor: getPriorityColor(item.priority) }]}>
-      <TouchableOpacity style={styles.taskContent} onPress={() => toggleTaskCompletion(item.id)}>
-        <PriorityIndicator priority={item.priority} />
-        <View style={styles.taskTextContainer}>
-          <Text style={[styles.taskTitle, item.isCompleted && styles.completedTask]} numberOfLines={1}>
-            {item.title}
-          </Text>
-          {item.description && (
-            <Text style={styles.taskDescription} numberOfLines={2}>{item.description}</Text>
-          )}
-          <Text style={styles.taskTime}>{format(new Date(item.dueDate), 'HH:mm', { locale: es })}</Text>
-        </View>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.deleteButton} onPress={() => confirmDelete(item.id)}>
-        <Ionicons name="trash-outline" size={22} color="#FF5252" />
-      </TouchableOpacity>
-    </View>
-  );
+  // Componente de cada tarea con animaciones
+  const TaskItem = ({ item, index }) => {
+    const slideAnim = useRef(new Animated.Value(50)).current;
+    const opacityAnim = useRef(new Animated.Value(0)).current;
 
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case 'high': return '#FF5252';
-      case 'medium': return '#FFC107';
-      case 'low': return '#4CAF50';
-      default: return '#9E9E9E';
-    }
+    useEffect(() => {
+      Animated.parallel([
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 400,
+          delay: index * 100,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacityAnim, {
+          toValue: 1,
+          duration: 400,
+          delay: index * 100,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }, []);
+
+    return (
+      <Animated.View
+        style={[
+          styles.taskItem,
+          { borderLeftColor: getPriorityColor(item.priority) },
+          { opacity: opacityAnim, transform: [{ translateX: slideAnim }] },
+        ]}
+      >
+        <TouchableOpacity
+          style={styles.taskContent}
+          onPress={() => toggleTaskCompletion(item.id)}
+          activeOpacity={0.7}
+        >
+          <PriorityIndicator priority={item.priority} />
+          <View style={styles.taskTextContainer}>
+            <Text style={[styles.taskTitle, item.isCompleted && styles.completedTask]} numberOfLines={1}>
+              {item.title}
+            </Text>
+            {item.description && (
+              <Text style={styles.taskDescription} numberOfLines={2}>
+                {item.description}
+              </Text>
+            )}
+            <Text style={styles.taskTime}>
+              {format(new Date(item.dueDate), 'HH:mm', { locale: es })}
+            </Text>
+          </View>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.deleteButton} onPress={() => confirmDelete(item.id)} activeOpacity={0.7}>
+          <Ionicons name="trash-outline" size={22} color="#FF5252" />
+        </TouchableOpacity>
+      </Animated.View>
+    );
   };
+
+  // Animación botón agregar
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  const onPressInAdd = () => {
+    Animated.spring(scaleAnim, { toValue: 0.9, useNativeDriver: true }).start();
+  };
+
+  const onPressOutAdd = () => {
+    Animated.spring(scaleAnim, { toValue: 1, friction: 3, tension: 40, useNativeDriver: true }).start();
+  };
+
+  useEffect(() => {
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(scaleAnim, { toValue: 1.1, duration: 1000, useNativeDriver: true }),
+        Animated.timing(scaleAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
+      ])
+    );
+    pulse.start();
+    return () => pulse.stop();
+  }, []);
 
   const styles = isDarkMode ? darkStyles : lightStyles;
 
@@ -159,9 +203,8 @@ export default function Home({ todos = [], onUpdate, deleteTodo, points, achieve
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
 
-        {/* Botón para modo oscuro/claro */}
         <View style={styles.topRightButton}>
-          <TouchableOpacity onPress={() => setIsDarkMode(!isDarkMode)} style={{ padding: 6 }}>
+          <TouchableOpacity onPress={() => setIsDarkMode(!isDarkMode)}>
             <Ionicons
               name={isDarkMode ? 'sunny-outline' : 'moon-outline'}
               size={28}
@@ -170,13 +213,10 @@ export default function Home({ todos = [], onUpdate, deleteTodo, points, achieve
           </TouchableOpacity>
         </View>
 
-        <Image
-          source={require('../../assets/icon.png')} 
-          style={styles.pic}
-        />
+        <Image source={require('../../assets/icon.png')} style={styles.pic} />
 
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => setShowDatePicker('selected')} style={styles.dateSelector}>
+          <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.dateSelector}>
             <Text style={styles.dateText}>
               {selectedDate
                 ? format(selectedDate, "EEEE, d 'de' MMMM", { locale: es })
@@ -197,7 +237,7 @@ export default function Home({ todos = [], onUpdate, deleteTodo, points, achieve
             mode="date"
             display="calendar"
             onChange={(e, date) => {
-              setShowDatePicker(null);
+              setShowDatePicker(false);
               if (date) setSelectedDate(date);
             }}
             locale="es-ES"
@@ -214,10 +254,9 @@ export default function Home({ todos = [], onUpdate, deleteTodo, points, achieve
         />
 
         <View style={styles.priorityFilterContainer}>
-          {['all', 'Alta', 'Media', 'Baja'].map((label) => {
+          {['all', 'Alta', 'Media', 'Baja'].map(label => {
             const isSelected = selectedPriority === label;
             const priorityKey = label === 'all' ? undefined : priorityTextToValue(label);
-
             return (
               <TouchableOpacity
                 key={label}
@@ -228,12 +267,7 @@ export default function Home({ todos = [], onUpdate, deleteTodo, points, achieve
                 ]}
                 onPress={() => setSelectedPriority(label)}
               >
-                <Text
-                  style={[
-                    styles.priorityFilterText,
-                    isSelected && styles.priorityFilterTextActive,
-                  ]}
-                >
+                <Text style={[styles.priorityFilterText, isSelected && styles.priorityFilterTextActive]}>
                   {label === 'all' ? 'Todas' : label}
                 </Text>
               </TouchableOpacity>
@@ -258,14 +292,13 @@ export default function Home({ todos = [], onUpdate, deleteTodo, points, achieve
 
         <FlatList
           data={filteredTodos}
-          renderItem={renderTaskItem}
+          renderItem={({ item, index }) => <TaskItem item={item} index={index} />}
           keyExtractor={item => item.id.toString()}
           contentContainerStyle={styles.taskList}
           ListEmptyComponent={<Text style={styles.emptyText}>No hay tareas</Text>}
           scrollEnabled={false}
         />
 
-        {/* Estadísticas en cuadro */}
         <View style={styles.statsBox}>
           <Text style={styles.statsTitle}>Estadísticas de tareas</Text>
           <View style={styles.statsRow}>
@@ -284,7 +317,6 @@ export default function Home({ todos = [], onUpdate, deleteTodo, points, achieve
           </View>
         </View>
 
-        {/* Puntos y logros */}
         <View style={styles.infoContainer}>
           <Text style={styles.points}>⭐ Puntos: {points}</Text>
           {achievements.includes('5tasks') && <Text style={styles.achievement}>🏅 5 tareas completadas</Text>}
@@ -292,7 +324,6 @@ export default function Home({ todos = [], onUpdate, deleteTodo, points, achieve
         </View>
       </ScrollView>
 
-      {/* Botón para Hábitos */}
       <TouchableOpacity
         style={[styles.collabButton, { backgroundColor: '#00BCD4' }]}
         onPress={() => navigation.navigate('Habits')}
@@ -302,7 +333,6 @@ export default function Home({ todos = [], onUpdate, deleteTodo, points, achieve
         <Text style={styles.collabButtonText}>Hábitos</Text>
       </TouchableOpacity>
 
-      {/* Botón para ir a Finanzas */}
       <TouchableOpacity
         style={[styles.collabButton, { bottom: 160, backgroundColor: '#4CAF50' }]}
         onPress={() => navigation.navigate('Finance')}
@@ -312,16 +342,28 @@ export default function Home({ todos = [], onUpdate, deleteTodo, points, achieve
         <Text style={styles.collabButtonText}>Finanzas</Text>
       </TouchableOpacity>
 
-      {/* Botón para agregar nueva tarea */}
-      <TouchableOpacity
-        style={styles.addButton}
-        onPress={() => navigation.navigate('AddTodo', { selectedDate })}
-        activeOpacity={0.8}
-      >
-        <Text style={styles.plus}>+</Text>
-      </TouchableOpacity>
+      <Animated.View style={[styles.addButton, { transform: [{ scale: scaleAnim }] }]}>
+        <TouchableOpacity
+          onPress={() => navigation.navigate('AddTodo', { selectedDate })}
+          activeOpacity={0.8}
+          onPressIn={onPressInAdd}
+          onPressOut={onPressOutAdd}
+          style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}
+        >
+          <Text style={styles.plus}>+</Text>
+        </TouchableOpacity>
+      </Animated.View>
     </View>
   );
+
+  function getPriorityColor(priority) {
+    switch (priority) {
+      case 'high': return '#FF5252';
+      case 'medium': return '#FFC107';
+      case 'low': return '#4CAF50';
+      default: return '#9E9E9E';
+    }
+  }
 }
 
 const lightStyles = StyleSheet.create({
@@ -421,59 +463,34 @@ const lightStyles = StyleSheet.create({
   plus: { fontSize: 32, color: '#fff', marginBottom: 2 },
   emptyText: { textAlign: 'center', color: '#888', marginTop: 20, fontSize: 16 },
   infoContainer: { marginTop: 20, alignItems: 'center' },
-  points: { fontSize: 16, color: '#333', fontWeight: '600' },
-  achievement: { fontSize: 14, color: '#4CAF50', marginTop: 4 },
-
-  // Estadísticas cuadro
+  points: { fontSize: 16, fontWeight: '600', color: '#333' },
+  achievement: { fontSize: 14, marginTop: 4 },
   statsBox: {
-    backgroundColor: '#e0e0e0',
-    borderRadius: 15,
-    paddingVertical: 20,
-    paddingHorizontal: 24,
-    marginTop: 30,
-    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+    padding: 12,
+    borderRadius: 14,
+    marginTop: 10,
   },
   statsTitle: {
     fontSize: 18,
     fontWeight: '700',
-    marginBottom: 16,
-    color: '#333',
+    marginBottom: 10,
+    textAlign: 'center',
   },
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '100%',
-  },
-  statItem: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  statNumber: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#333',
-  },
-  statLabel: {
-    fontSize: 14,
-    color: '#555',
-    marginTop: 6,
-  },
-
-  // Estilo para botones flotantes
+  statsRow: { flexDirection: 'row', justifyContent: 'space-around' },
+  statItem: { alignItems: 'center' },
+  statNumber: { fontSize: 22, fontWeight: '700', color: '#333' },
+  statLabel: { fontSize: 14, color: '#555' },
   collabButton: {
     position: 'absolute',
     bottom: 100,
     right: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 30,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
+    elevation: 5,
   },
   collabButtonText: {
     color: '#fff',
@@ -481,6 +498,19 @@ const lightStyles = StyleSheet.create({
     marginLeft: 8,
     fontSize: 16,
   },
+topRightButton: {
+  position: 'absolute',
+  top: 60,  // o el valor que prefieras para la distancia desde arriba
+  left: 15, // botón a la izquierda
+  width: 44,    // tamaño fijo (ajusta según tamaño del ícono)
+  height: 44,
+  justifyContent: 'center',
+  alignItems: 'center',
+  zIndex: 10,
+},
+
+
+
 });
 
 const darkStyles = StyleSheet.create({
@@ -490,9 +520,9 @@ const darkStyles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 25 },
   dateSelector: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10, backgroundColor: '#333' },
   dateText: { fontSize: 16, fontWeight: '600', color: '#eee' },
-  toggleText: { color: '#4A90E2', fontSize: 14, fontWeight: '500' },
+  toggleText: { color: '#5AB4F8', fontSize: 14, fontWeight: '500' },
   searchInput: {
-    backgroundColor: '#333',
+    backgroundColor: '#222',
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: Platform.OS === 'ios' ? 12 : 8,
@@ -516,7 +546,7 @@ const darkStyles = StyleSheet.create({
     backgroundColor: '#555',
   },
   priorityFilterText: {
-    color: '#ccc',
+    color: '#aaa',
     fontWeight: '600',
   },
   priorityFilterTextActive: {
@@ -540,7 +570,7 @@ const darkStyles = StyleSheet.create({
   sortBtn: {
     paddingVertical: 8,
     paddingHorizontal: 16,
-    backgroundColor: '#3478F6',
+    backgroundColor: '#5AB4F8',
     borderRadius: 20,
   },
   sortBtnText: {
@@ -561,15 +591,15 @@ const darkStyles = StyleSheet.create({
   taskContent: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   taskTextContainer: { flex: 1, marginLeft: 12 },
   taskTitle: { fontSize: 16, fontWeight: '500', color: '#eee', marginBottom: 4 },
-  completedTask: { textDecorationLine: 'line-through', color: '#888' },
+  completedTask: { textDecorationLine: 'line-through', color: '#777' },
   taskDescription: { fontSize: 14, color: '#bbb', marginBottom: 4, lineHeight: 20 },
-  taskTime: { fontSize: 12, color: '#aaa' },
+  taskTime: { fontSize: 12, color: '#999' },
   deleteButton: { paddingLeft: 10 },
   addButton: {
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#000',
+    backgroundColor: '#fff',
     position: 'absolute',
     bottom: 30,
     right: 20,
@@ -577,67 +607,49 @@ const darkStyles = StyleSheet.create({
     alignItems: 'center',
     elevation: 4,
   },
-  plus: { fontSize: 32, color: '#fff', marginBottom: 2 },
-  emptyText: { textAlign: 'center', color: '#888', marginTop: 20, fontSize: 16 },
+  plus: { fontSize: 32, color: '#000', marginBottom: 2 },
+  emptyText: { textAlign: 'center', color: '#777', marginTop: 20, fontSize: 16 },
   infoContainer: { marginTop: 20, alignItems: 'center' },
-  points: { fontSize: 16, color: '#eee', fontWeight: '600' },
-  achievement: { fontSize: 14, color: '#4CAF50', marginTop: 4 },
-
-  // Estadísticas cuadro
+  points: { fontSize: 16, fontWeight: '600', color: '#eee' },
+  achievement: { fontSize: 14, marginTop: 4, color: '#ccc' },
   statsBox: {
-    backgroundColor: '#222',
-    borderRadius: 15,
-    paddingVertical: 20,
-    paddingHorizontal: 24,
-    marginTop: 30,
-    alignItems: 'center',
+    backgroundColor: '#333',
+    padding: 12,
+    borderRadius: 14,
+    marginTop: 10,
   },
   statsTitle: {
     fontSize: 18,
     fontWeight: '700',
-    marginBottom: 16,
+    marginBottom: 10,
+    textAlign: 'center',
     color: '#eee',
   },
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '100%',
-  },
-  statItem: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  statNumber: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#eee',
-  },
-  statLabel: {
-    fontSize: 14,
-    color: '#bbb',
-    marginTop: 6,
-  },
-
-  // Estilo para botones flotantes
+  statsRow: { flexDirection: 'row', justifyContent: 'space-around' },
+  statItem: { alignItems: 'center' },
+  statNumber: { fontSize: 22, fontWeight: '700', color: '#eee' },
+  statLabel: { fontSize: 14, color: '#aaa' },
   collabButton: {
     position: 'absolute',
     bottom: 100,
     right: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 30,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
+    elevation: 5,
   },
   collabButtonText: {
     color: '#fff',
     fontWeight: '700',
     marginLeft: 8,
     fontSize: 16,
+  },
+  topRightButton: {
+    position: 'absolute',
+    top: 15,
+    right: 15,
+    zIndex: 10,
   },
 });

@@ -1,5 +1,4 @@
-// Archivo: Finance.js
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -11,19 +10,46 @@ import {
   Modal,
   Pressable,
   Platform,
+  Animated,
+  Easing,
+  useColorScheme,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+const STORAGE_KEY = '@APP_DARK_MODE';
+
 export default function Finance() {
+  const navigation = useNavigation();
+  const systemColorScheme = useColorScheme();
+
+  const [isDarkMode, setIsDarkMode] = useState(systemColorScheme === 'dark');
   const [expenses, setExpenses] = useState([]);
   const [total, setTotal] = useState(0);
   const [budget, setBudget] = useState(0);
   const [isBudgetModalVisible, setIsBudgetModalVisible] = useState(false);
   const [budgetInput, setBudgetInput] = useState('');
-  const navigation = useNavigation();
+
+  // Animaciones totales
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.9)).current;
+
+  // Animación botón agregar - escala suave onPress
+  const addBtnScale = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    AsyncStorage.getItem(STORAGE_KEY).then(value => {
+      if (value !== null) {
+        setIsDarkMode(value === 'true');
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    AsyncStorage.setItem(STORAGE_KEY, isDarkMode.toString());
+  }, [isDarkMode]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -45,6 +71,24 @@ export default function Finance() {
     const unsubscribe = navigation.addListener('focus', fetchData);
     return unsubscribe;
   }, [navigation]);
+
+  // Animar totales cada vez que cambian
+  useEffect(() => {
+    fadeAnim.setValue(0);
+    scaleAnim.setValue(0.9);
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        friction: 5,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [total, budget]);
 
   const updateTotal = (list) => {
     const sum = list.reduce((acc, e) => acc + Number(e.amount), 0);
@@ -94,56 +138,97 @@ export default function Finance() {
     }
   };
 
-  const renderItem = ({ item }) => (
-    <View style={styles.expenseItem}>
-      <View style={{ flex: 1 }}>
-        <Text style={styles.expenseTitle}>{item.title}</Text>
-        <Text style={styles.expenseDate}>{item.date}</Text>
-      </View>
-      <Text style={styles.expenseAmount}>{formatCLP(item.amount)}</Text>
-      <TouchableOpacity onPress={() => handleDelete(item.id)}>
-        <Ionicons name="trash-outline" size={22} color="#e53935" />
-      </TouchableOpacity>
-    </View>
-  );
+  // Componente gasto con animación fade + slide desde abajo
+  const ExpenseItem = ({ item, index }) => {
+    const slideAnim = useRef(new Animated.Value(20)).current;
+    const opacityAnim = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+      Animated.parallel([
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 400,
+          delay: index * 100,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacityAnim, {
+          toValue: 1,
+          duration: 400,
+          delay: index * 100,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }, []);
+
+    return (
+      <Animated.View
+        style={[
+          isDarkMode ? darkStyles.expenseItem : lightStyles.expenseItem,
+          {
+            opacity: opacityAnim,
+            transform: [{ translateY: slideAnim }],
+          },
+        ]}
+      >
+        <View style={{ flex: 1 }}>
+          <Text style={isDarkMode ? darkStyles.expenseTitle : lightStyles.expenseTitle}>{item.title}</Text>
+          <Text style={isDarkMode ? darkStyles.expenseDate : lightStyles.expenseDate}>{item.date}</Text>
+        </View>
+        <Text style={isDarkMode ? darkStyles.expenseAmount : lightStyles.expenseAmount}>{formatCLP(item.amount)}</Text>
+        <TouchableOpacity onPress={() => handleDelete(item.id)}>
+          <Ionicons name="trash-outline" size={22} color="#e53935" />
+        </TouchableOpacity>
+      </Animated.View>
+    );
+  };
+
+  const renderItem = ({ item, index }) => <ExpenseItem item={item} index={index} />;
 
   const remaining = budget - total;
 
   return (
-    <View style={styles.container}>
-      <SafeAreaView style={styles.headerContainer}>
+    <View style={isDarkMode ? darkStyles.container : lightStyles.container}>
+      <SafeAreaView style={isDarkMode ? darkStyles.headerContainer : lightStyles.headerContainer}>
         <TouchableOpacity
-          style={styles.iconBackWrapper}
+          style={isDarkMode ? darkStyles.iconBackWrapper : lightStyles.iconBackWrapper}
           onPress={() => navigation.goBack()}
         >
-          <Ionicons name="chevron-back" size={28} color="#4CAF50" />
-          <Text style={styles.backText}>Volver</Text>
+          <Ionicons name="chevron-back" size={28} color={isDarkMode ? '#81C784' : '#4CAF50'} />
+          <Text style={isDarkMode ? darkStyles.backText : lightStyles.backText}>Volver</Text>
         </TouchableOpacity>
 
         <TouchableOpacity onPress={openBudgetModal}>
-          <Ionicons name="wallet-outline" size={24} color="#4CAF50" />
+          <Ionicons name="wallet-outline" size={24} color={isDarkMode ? '#81C784' : '#4CAF50'} />
         </TouchableOpacity>
       </SafeAreaView>
 
-      <Text style={styles.headerTitle}>Resumen Financiero</Text>
+      <Text style={isDarkMode ? darkStyles.headerTitle : lightStyles.headerTitle}>Resumen Financiero</Text>
 
-      <View style={styles.totalBox}>
-        <Text style={styles.totalText}>Presupuesto:</Text>
-        <Text style={styles.totalAmount}>{formatCLP(budget)}</Text>
+      <Animated.View
+        style={[
+          isDarkMode ? darkStyles.totalBox : lightStyles.totalBox,
+          {
+            opacity: fadeAnim,
+            transform: [{ scale: scaleAnim }],
+          },
+        ]}
+      >
+        <Text style={isDarkMode ? darkStyles.totalText : lightStyles.totalText}>Presupuesto:</Text>
+        <Text style={isDarkMode ? darkStyles.totalAmount : lightStyles.totalAmount}>{formatCLP(budget)}</Text>
 
-        <Text style={[styles.totalText, { marginTop: 16 }]}>Gastos Totales:</Text>
-        <Text style={styles.totalAmountRed}>{formatCLP(total)}</Text>
+        <Text style={[isDarkMode ? darkStyles.totalText : lightStyles.totalText, { marginTop: 16 }]}>Gastos Totales:</Text>
+        <Text style={isDarkMode ? darkStyles.totalAmountRed : lightStyles.totalAmountRed}>{formatCLP(total)}</Text>
 
-        <Text style={[styles.totalText, { marginTop: 16 }]}>Saldo Restante:</Text>
+        <Text style={[isDarkMode ? darkStyles.totalText : lightStyles.totalText, { marginTop: 16 }]}>Saldo Restante:</Text>
         <Text
           style={[
-            styles.totalAmount,
+            isDarkMode ? darkStyles.totalAmount : lightStyles.totalAmount,
             { color: remaining < 0 ? '#e53935' : '#2e7d32' },
           ]}
         >
           {formatCLP(remaining)}
         </Text>
-      </View>
+      </Animated.View>
 
       <FlatList
         data={[...expenses].reverse()}
@@ -153,10 +238,19 @@ export default function Finance() {
       />
 
       <TouchableOpacity
-        style={styles.addButton}
+        style={isDarkMode ? darkStyles.addButton : lightStyles.addButton}
+        activeOpacity={0.8}
+        onPressIn={() => {
+          Animated.spring(addBtnScale, { toValue: 0.95, useNativeDriver: true }).start();
+        }}
+        onPressOut={() => {
+          Animated.spring(addBtnScale, { toValue: 1, friction: 3, tension: 40, useNativeDriver: true }).start();
+        }}
         onPress={() => navigation.navigate('AddExpense')}
       >
-        <Text style={styles.addButtonText}>+ Agregar Gasto</Text>
+        <Animated.View style={{ transform: [{ scale: addBtnScale }] }}>
+          <Text style={isDarkMode ? darkStyles.addButtonText : lightStyles.addButtonText}>+ Agregar Gasto</Text>
+        </Animated.View>
       </TouchableOpacity>
 
       {/* Modal para ingresar presupuesto */}
@@ -166,29 +260,30 @@ export default function Finance() {
         animationType="slide"
         onRequestClose={() => setIsBudgetModalVisible(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>Establecer Presupuesto</Text>
+        <View style={isDarkMode ? darkStyles.modalOverlay : lightStyles.modalOverlay}>
+          <View style={isDarkMode ? darkStyles.modalContainer : lightStyles.modalContainer}>
+            <Text style={isDarkMode ? darkStyles.modalTitle : lightStyles.modalTitle}>Establecer Presupuesto</Text>
             <TextInput
-              style={styles.modalInput}
+              style={isDarkMode ? darkStyles.modalInput : lightStyles.modalInput}
               keyboardType="numeric"
               value={budgetInput}
               onChangeText={setBudgetInput}
               placeholder="Ingresa tu presupuesto mensual"
+              placeholderTextColor={isDarkMode ? '#999' : '#888'}
               maxLength={10}
             />
-            <View style={styles.modalButtons}>
+            <View style={isDarkMode ? darkStyles.modalButtons : lightStyles.modalButtons}>
               <Pressable
-                style={[styles.modalButton, { backgroundColor: '#e53935' }]}
+                style={[isDarkMode ? darkStyles.modalButton : lightStyles.modalButton, { backgroundColor: '#e53935' }]}
                 onPress={() => setIsBudgetModalVisible(false)}
               >
-                <Text style={styles.modalButtonText}>Cancelar</Text>
+                <Text style={isDarkMode ? darkStyles.modalButtonText : lightStyles.modalButtonText}>Cancelar</Text>
               </Pressable>
               <Pressable
-                style={[styles.modalButton, { backgroundColor: '#4CAF50' }]}
+                style={[isDarkMode ? darkStyles.modalButton : lightStyles.modalButton, { backgroundColor: '#4CAF50' }]}
                 onPress={saveBudget}
               >
-                <Text style={styles.modalButtonText}>Guardar</Text>
+                <Text style={isDarkMode ? darkStyles.modalButtonText : lightStyles.modalButtonText}>Guardar</Text>
               </Pressable>
             </View>
           </View>
@@ -198,8 +293,8 @@ export default function Finance() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff', padding: 20 },
+const baseStyles = {
+  container: { flex: 1, padding: 20 },
   headerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -213,18 +308,15 @@ const styles = StyleSheet.create({
   },
   backText: {
     fontSize: 16,
-    color: '#4CAF50',
     fontWeight: '600',
     marginLeft: 4,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#333',
     marginBottom: 16,
   },
   totalBox: {
-    backgroundColor: '#e0f2f1',
     borderRadius: 12,
     padding: 20,
     alignItems: 'center',
@@ -233,22 +325,18 @@ const styles = StyleSheet.create({
   totalText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
   },
   totalAmount: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#2e7d32',
     marginTop: 4,
   },
   totalAmountRed: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#e53935',
     marginTop: 4,
   },
   expenseItem: {
-    backgroundColor: '#f5f5f5',
     padding: 16,
     borderRadius: 10,
     marginBottom: 12,
@@ -259,21 +347,17 @@ const styles = StyleSheet.create({
   expenseTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
   },
   expenseDate: {
     fontSize: 13,
-    color: '#888',
     marginTop: 4,
   },
   expenseAmount: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#e53935',
     marginRight: 6,
   },
   addButton: {
-    backgroundColor: '#4CAF50',
     paddingVertical: 14,
     borderRadius: 30,
     alignItems: 'center',
@@ -281,19 +365,16 @@ const styles = StyleSheet.create({
     marginBottom: 50,
   },
   addButtonText: {
-    marginBottom: '20px',
-    color: '#fff',
     fontWeight: '700',
     fontSize: 16,
+    marginBottom: 0,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: '#000000aa',
     justifyContent: 'center',
     paddingHorizontal: 20,
   },
   modalContainer: {
-    backgroundColor: '#fff',
     borderRadius: 12,
     padding: 20,
   },
@@ -305,7 +386,6 @@ const styles = StyleSheet.create({
   },
   modalInput: {
     borderWidth: 1,
-    borderColor: '#ccc',
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -329,4 +409,52 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 16,
   },
+};
+
+const lightStyles = StyleSheet.create({
+  ...baseStyles,
+  container: { ...baseStyles.container, backgroundColor: '#fff' },
+  backText: { ...baseStyles.backText, color: '#4CAF50' },
+  headerTitle: { ...baseStyles.headerTitle, color: '#333' },
+  totalBox: { ...baseStyles.totalBox, backgroundColor: '#e0f2f1' },
+  totalText: { ...baseStyles.totalText, color: '#333' },
+  totalAmount: { ...baseStyles.totalAmount, color: '#2e7d32' },
+  totalAmountRed: { ...baseStyles.totalAmountRed, color: '#e53935' },
+  expenseItem: { ...baseStyles.expenseItem, backgroundColor: '#f5f5f5' },
+  expenseTitle: { ...baseStyles.expenseTitle, color: '#333' },
+  expenseDate: { ...baseStyles.expenseDate, color: '#888' },
+  expenseAmount: { ...baseStyles.expenseAmount, color: '#e53935' },
+  addButton: { ...baseStyles.addButton, backgroundColor: '#4CAF50' },
+  addButtonText: { ...baseStyles.addButtonText, color: '#fff' },
+  modalOverlay: { ...baseStyles.modalOverlay, backgroundColor: '#000000aa' },
+  modalContainer: { ...baseStyles.modalContainer, backgroundColor: '#fff' },
+  modalTitle: { ...baseStyles.modalTitle, color: '#333' },
+  modalInput: { ...baseStyles.modalInput, borderColor: '#ccc', color: '#000' },
+  modalButtons: { ...baseStyles.modalButtons },
+  modalButton: { ...baseStyles.modalButton },
+  modalButtonText: { ...baseStyles.modalButtonText },
+});
+
+const darkStyles = StyleSheet.create({
+  ...baseStyles,
+  container: { ...baseStyles.container, backgroundColor: '#121212' },
+  backText: { ...baseStyles.backText, color: '#81C784' },
+  headerTitle: { ...baseStyles.headerTitle, color: '#eee' },
+  totalBox: { ...baseStyles.totalBox, backgroundColor: '#333' },
+  totalText: { ...baseStyles.totalText, color: '#eee' },
+  totalAmount: { ...baseStyles.totalAmount, color: '#81C784' },
+  totalAmountRed: { ...baseStyles.totalAmountRed, color: '#e57373' },
+  expenseItem: { ...baseStyles.expenseItem, backgroundColor: '#222' },
+  expenseTitle: { ...baseStyles.expenseTitle, color: '#eee' },
+  expenseDate: { ...baseStyles.expenseDate, color: '#bbb' },
+  expenseAmount: { ...baseStyles.expenseAmount, color: '#e57373' },
+  addButton: { ...baseStyles.addButton, backgroundColor: '#81C784' },
+  addButtonText: { ...baseStyles.addButtonText, color: '#121212' },
+  modalOverlay: { ...baseStyles.modalOverlay, backgroundColor: '#000000cc' },
+  modalContainer: { ...baseStyles.modalContainer, backgroundColor: '#222' },
+  modalTitle: { ...baseStyles.modalTitle, color: '#eee' },
+  modalInput: { ...baseStyles.modalInput, borderColor: '#555', color: '#eee' },
+  modalButtons: { ...baseStyles.modalButtons },
+  modalButton: { ...baseStyles.modalButton },
+  modalButtonText: { ...baseStyles.modalButtonText },
 });

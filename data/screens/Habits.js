@@ -17,8 +17,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { LineChart } from 'react-native-chart-kit';
 
 export default function Habits({ habits, updateHabits }) {
-  const colorScheme = useColorScheme();
-  const isDarkMode = colorScheme === 'dark';
+  const systemColorScheme = useColorScheme();
+  // Estado para modo oscuro (por defecto según sistema)
+  const [isDarkMode, setIsDarkMode] = useState(systemColorScheme === 'dark');
 
   const [screenWidth, setScreenWidth] = useState(Dimensions.get('window').width);
   const [newHabit, setNewHabit] = useState('');
@@ -42,6 +43,11 @@ export default function Habits({ habits, updateHabits }) {
       useNativeDriver: true,
     }).start();
   }, [habits]);
+
+  // Si cambia el modo del sistema, actualizar el estado sólo si el usuario no ha cambiado manualmente (opcional)
+  useEffect(() => {
+    setIsDarkMode(systemColorScheme === 'dark');
+  }, [systemColorScheme]);
 
   const formatDate = (date) => date.toISOString().split('T')[0];
 
@@ -282,8 +288,24 @@ export default function Habits({ habits, updateHabits }) {
     />
   );
 
+  // Función para alternar modo oscuro
+  const toggleDarkMode = () => setIsDarkMode((prev) => !prev);
+
   return (
     <View style={[styles.container, isDarkMode && { backgroundColor: '#121212' }]}>
+      {/* Botón modo oscuro arriba izquierda */}
+      <TouchableOpacity
+        style={styles.darkModeButton}
+        onPress={toggleDarkMode}
+        activeOpacity={0.7}
+      >
+        <Ionicons
+          name={isDarkMode ? 'sunny' : 'moon'}
+          size={28}
+          color={isDarkMode ? '#FFC107' : '#555'}
+        />
+      </TouchableOpacity>
+
       <Text style={[styles.title, isDarkMode && { color: '#A5D6A7' }]}>🏆 Mis Hábitos</Text>
       <Text style={[styles.subtitle, isDarkMode && { color: '#CCC' }]}>
         Construye rutinas saludables día a día
@@ -386,6 +408,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#f1f1f1',
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
+  },
+  darkModeButton: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 50 : 20,
+    left: 20,
+    zIndex: 10,
+    padding: 8,
+    borderRadius: 10,
+    backgroundColor: 'transparent',
   },
   title: {
     fontSize: 28,
